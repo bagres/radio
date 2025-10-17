@@ -68,6 +68,13 @@
     <button id="audioToggle" onclick="toggleAudio()">Ativar Áudio</button>
     <button id="skipButton" onclick="skipSong()">Pular Música (Skip)</button>
 </div>
+<br /> <br /><br />
+
+<form id="youtube-form" action="/radio/add-youtube" method="post">
+    <label for="videoId">YouTube URL ou Video ID:</label>
+    <input id="videoId" name="videoId" type="text" placeholder="ex: https://youtu.be/abc123" required />
+    <button type="submit">Adicionar</button>
+</form>
 
 <script>
     var player;
@@ -208,6 +215,33 @@
             alert("Erro de rede. Verifique a conexão.");
         }
     }
+    async function addMusic(urlMusic) {
+    const videoId = extractYouTubeId(urlMusic);
+    await fetch('/radio/add-youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'videoId=' + encodeURIComponent(videoId)
+    });
+}
+
+function extractYouTubeId(input) {
+    // Se houver "v=", pega o que vem depois até o próximo "&" ou fim da string
+    const match = input.match(/[?&]v=([^&]+)/);
+    if (match) {
+        return match[1];
+    }
+
+    // Se for link curto tipo youtu.be/ID
+    const shortMatch = input.match(/youtu\.be\/([^?&]+)/);
+    if (shortMatch) {
+        return shortMatch[1];
+    }
+
+    // Caso contrário, retorna o próprio input (já pode ser o ID)
+    console.log(input)
+    return input;
+}
+
 </script>
 </body>
 </html>
