@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🎧 Rádio Spring Boot - YouTube (Sincronizada)</title>
+    <style>
+        body {
+            background: #111;
+            color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #player {
+            /* Torna o player quase invisível */
+            width: 1px;
+            height: 1px;
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            overflow: hidden;
+            margin: 0;
+            background: transparent;
+        }
+        #current-info {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+        .controls {
+            display: flex;
+            gap: 10px; /* Espaço entre os botões */
+            margin-top: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5ész;
+            transition: background 0.3s;
+        }
+        #audioToggle {
+            background: #3498db; /* Azul */
+            color: white;
+        }
+        #audioToggle:hover {
+            background: #2980b9;
+        }
+        #skipButton {
+            background: #e74c3c; /* Vermelho */
+            color: white;
+        }
+        #skipButton:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+<h2>🎵 Rádio Spring Boot (YouTube Live)</h2>
+
+<div id="player"></div>
+<div id="current-info">Carregando rádio...</div>
+
+<div class="controls">
+    <button id="audioToggle" onclick="toggleAudio()">Ativar Áudio</button>
+    <button id="skipButton" onclick="skipSong()">Pular Música (Skip)</button>
+</div>
+
+<script>
+    var player;
+    var currentVideoId = '';
+    var isMuted = true; // Estado inicial deve ser MUTADO para autoplay
+
+    // 1. Injeta o script da API do YouTube
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    // 2. Função de callback que a API do YouTube CHAMA quando está pronta
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+            height: '270',
+            width: '480',
+            videoId: '',
+            playerVars: {
+                'autoplay': 1,
+                'controls': 0,
+                'modestbranding': 1,
+                'rel': 0,
+                'mute': 1, // 💥 MUTE = 1 para forçar o autoplay no Chrome/Firefox
+                'disablekb': 1
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    }
+
+    // 3. Função para garantir o Play e tratar o FIM do vídeo
+    function onPlayerStateChange(event) {
+        // Se o player for pausado ou estiver carregando
+        if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
+            // Força o play para manter o stream (mesmo mudo)
+            player.playVideo();
+        }
+
+        // Se o vídeo terminou (ENDED), simula um skip
+        if (event.data === YT.PlayerState.ENDED) {
+            console.log("Vídeo terminou. Enviando comando de skip automático.");
+            skipSong();
+        }
+    }
+
+    // 4. Player Pronto: Conecta-se ao servidor SSE
+    function onPlayerReady(event) {
+        event.target.playVideo(); // Tenta o play inicial, que funcionará por estar mudo
+        connectToMetadataStream();
+    }
+
+    // 5. Função de toggle para o usuário ativar o Áudio
+    function toggleAudio() {
+        const audioButton = document.getElementById('audioToggle');
+
+        if (isMuted) {
+            player.unMute();
+            isMuted = false;
+            audioButton.innerText = 'Desativar Áudio';
+            player.playVideo(); // Garante que a reprodução continua após o unmute
+        } else {
+            player.mute();
+            isMuted = true;
+            audioButton.innerText = 'Ativar Áudio';
+        }
+    }
+
+    // 6. Conexão SSE para Metadados (Sincronização de Tempo)
+    function connectToMetadataStream() {
+        const eventSource = new EventSource('/radio/metadata');
+
+        eventSource.addEventListener("sync", function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                const newVideoId = data.videoId;
+                const startTimeMs = data.startTime;
+
+                const currentTimeMs = Date.now();
+                const elapsedTimeMs = currentTimeMs - startTimeMs;
+
+                // 💥 AJUSTE CRUCIAL: Usa divisão com ponto flutuante para alta precisão
+                let seekTimeSeconds = elapsedTimeMs / 1000;
+
+                const LATENCY_COMPENSATION = 0.20; // Exemplo: 150 milissegundos
+                seekTimeSeconds += LATENCY_COMPENSATION;
+
+                if (seekTimeSeconds < 0) seekTimeSeconds = 0;
+
+                if (newVideoId !== currentVideoId) {
+                    currentVideoId = newVideoId;
+
+                    // Exibe o tempo com 2 casas decimais para visualização
+                    const displaySeekTime = seekTimeSeconds.toFixed(2);
+                    document.getElementById('current-info').innerText =
+                        `Tocando: ID ${newVideoId}`;
+
+                    // Envia o valor float (ex: 29.35) para o YouTube API
+                    player.loadVideoById(newVideoId, seekTimeSeconds);
+                    player.playVideo();
+                }
+            } catch (e) {
+                console.error("Erro ao processar dados de sincronização:", e);
+            }
+        });
+
+        eventSource.onerror = function(err) {
+            console.error("EventSource falhou. Tentando reconectar em 5 segundos...", err);
+            eventSource.close();
+            setTimeout(connectToMetadataStream, 5000);
+        };
+
+        eventSource.onopen = function() {
+            console.log("Conexão SSE estabelecida com sucesso.");
+        };
+    }
+
+    // 7. FUNÇÃO DE PULAR MÚSICA (SKIP)
+    async function skipSong() {
+        document.getElementById('current-info').innerText = 'Enviando comando para pular...';
+
+        try {
+            const response = await fetch('/radio/skip', {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                const message = await response.text();
+                console.log("Skip bem-sucedido:", message);
+            } else {
+                const errorText = await response.text();
+                alert("Falha ao pular música: " + errorText);
+            }
+        } catch (error) {
+            console.error("Erro de rede ao tentar pular:", error);
+            alert("Erro de rede. Verifique a conexão.");
+        }
+    }
+</script>
+</body>
+</html>
