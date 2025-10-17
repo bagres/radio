@@ -9,12 +9,16 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 public class RadioStreamController {
@@ -40,14 +44,57 @@ public class RadioStreamController {
     // ENDPOINT 1: Adicionar vídeo do YouTube
     // ===============================================
     @PostMapping("/radio/add-youtube")
-    public String addYoutubeAudio(@RequestParam("videoId") String videoId) {
-        if (videoId == null || videoId.isEmpty()) {
+    public String addYoutubeAudio(@RequestParam("videoId") String urlOrVideoId) {
+        if (urlOrVideoId == null || urlOrVideoId.isEmpty()) {
             return "Erro: ID do vídeo inválido.";
         }
 
+        String videoId = extractVideoId(urlOrVideoId);
+
+        if (videoId == null) {
+            return "Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.";
+        }
+
         // Adiciona o ID à playlist
+        // Supondo que 'youtubePlaylist' é uma estrutura de fila (Queue) ou lista
         youtubePlaylist.offer(videoId);
-        return "ID do YouTube adicionado à playlist: " + videoId;
+        return "ID do YouTube adicionada à playlist: " + videoId;
+    }
+
+    private String extractVideoId(String urlOrVideoId) {
+        // 1. Caso a entrada JÁ SEJA a ID do vídeo (e não uma URL)
+        if (urlOrVideoId.length() <= 11 && !urlOrVideoId.contains("/")) {
+            return urlOrVideoId;
+        }
+
+        // 2. Tentar extrair de formatos curtos ou de compartilhamento (youtu.be, /embed/)
+        String regexShort = "(?:youtu\\.be\\/|\\/embed\\/|\\/v\\/|watch\\?v=|v%3D|v\\=|youtu\\.be\\/)([^#\\&\\?]{11})";
+
+        Pattern pattern = Pattern.compile(regexShort, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(urlOrVideoId);
+
+        if (matcher.find()) {
+            // O grupo 1 ([^#\\&\\?]{11}) captura os 11 caracteres da ID
+            return matcher.group(1);
+        }
+
+        // 3. Tentar extrair de URLs completas usando a classe URL (mais seguro, mas mais complexo)
+        try {
+            URL url = new URL(urlOrVideoId);
+            String query = url.getQuery();
+            if (query != null) {
+                // Busca o parâmetro 'v=' na query string
+                for (String param : query.split("&")) {
+                    if (param.startsWith("v=")) {
+                        return param.substring(2);
+                    }
+                }
+            }
+        } catch (MalformedURLException e) {
+            // Se a entrada não for uma URL válida, ignora este bloco e prossegue para a falha
+        }
+
+        return null;
     }
 
     // ===============================================
