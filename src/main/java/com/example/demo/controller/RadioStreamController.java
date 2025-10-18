@@ -33,7 +33,7 @@ public class RadioStreamController {
 
     // NOVO: Timestamp Unix em ms de quando o vídeo atual começou a tocar
     private volatile long currentVideoStartTimeMs = 0;
-
+//Mudanca para testar auto-deploy
     @PostConstruct
     public void init() {
         // Inicia o loop de gerenciamento da playlist e ARMAZENA O FUTURE
