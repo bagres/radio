@@ -28,7 +28,7 @@ public class RadioStreamController {
 
     private Future<?> playlistFuture;
     private final Queue<String> youtubePlaylist = new ConcurrentLinkedQueue<>();
-
+//Testando auto deploy
     private volatile String currentVideoId = null;
 
     // NOVO: Timestamp Unix em ms de quando o vídeo atual começou a tocar
