@@ -213,4 +213,11 @@ public class RadioStreamController {
             e.printStackTrace();
         }
     }
+    // ===============================================
+// ENDPOINT 4: HEALTH CHECK / KEEP-ALIVE
+// ===============================================
+    @GetMapping("/radio/status")
+    public String statusCheck() {
+        return "OK";
+    }
 }
