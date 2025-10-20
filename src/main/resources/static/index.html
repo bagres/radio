@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎧 Rádio Spring Boot - YouTube (Sincronizada)</title>
     <style>
         /* ======== ESTILO GERAL ======== */
@@ -13,8 +14,9 @@
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100vh;
+          min-height: 100vh;
           margin: 0;
+          padding: 20px;
           overflow: hidden;
         }
 
@@ -25,6 +27,7 @@
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           animation: pulse 3s infinite alternate;
+          text-align: center;
         }
 
         @keyframes pulse {
@@ -51,6 +54,7 @@
           padding: 30px 40px;
           text-align: center;
           width: 350px;
+          max-width: 90%;
           transition: transform 0.3s ease;
         }
 
@@ -64,12 +68,14 @@
           font-size: 1.1em;
           font-weight: 500;
           color: #ccc;
+          word-break: break-word;
         }
 
         /* ======== BOTÕES ======== */
         .controls {
           display: flex;
           justify-content: center;
+          flex-wrap: wrap;
           gap: 15px;
           margin-top: 20px;
         }
@@ -113,8 +119,14 @@
           gap: 10px;
         }
 
+        label {
+          font-size: 0.9em;
+          color: #aaa;
+        }
+
         input[type="text"] {
-          width: 260px;
+          width: 100%;
+          max-width: 260px;
           padding: 10px;
           border-radius: 8px;
           border: 1px solid #555;
@@ -153,13 +165,48 @@
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+
+        /* ======== RESPONSIVIDADE ======== */
+        @media (max-width: 600px) {
+          h2 {
+            font-size: 1.6em;
+          }
+
+          .radio-container {
+            width: 95%;
+            padding: 25px 20px;
+          }
+
+          button {
+            width: 100%;
+            max-width: 200px;
+          }
+
+          input[type="text"] {
+            width: 90%;
+          }
+
+          #current-info {
+            font-size: 1em;
+          }
+        }
+
+        @media (min-width: 1200px) {
+          h2 {
+            font-size: 2.4em;
+          }
+
+          .radio-container {
+            width: 420px;
+          }
+        }
     </style>
 </head>
 <body>
 <div class="background-anim"></div>
 
 <div class="radio-container">
-    <h2>🎵 Rádio Bagres 🐟 </h2>
+    <h2>🎵 Rádio Spring Boot</h2>
 
     <div id="player"></div>
     <div id="current-info">Carregando rádio...</div>
@@ -169,14 +216,14 @@
         <button id="skipButton" onclick="skipSong()">⏭ Pular Música</button>
     </div>
 
-    <form id="youtube-form" onsubmit="event.preventDefault(); addMusic(document.getElementById('videoId').value);">
-        <label for="videoId">YouTube URL ou Video ID:</label>
+    <form id="youtube-form" action="/radio/add-youtube" method="post">
+        <label for="videoId">Adicionar música do YouTube:</label>
         <input id="videoId" name="videoId" type="text" placeholder="ex: https://youtu.be/abc123" required />
         <button type="submit">Adicionar</button>
     </form>
 </div>
 
-<!-- ========== SCRIPT ========== -->
+<!-- ========== SCRIPT ORIGINAL ========== -->
 <script>
     var player;
     var currentVideoId = '';
@@ -248,7 +295,7 @@
 
           if (newVideoId !== currentVideoId) {
             currentVideoId = newVideoId;
-            document.getElementById('current-info').innerText = `🎶 Tocando: ${newVideoId}`;
+            document.getElementById('current-info').innerText = 🎶 Tocando: ${newVideoId};
             player.loadVideoById(newVideoId, seekTimeSeconds);
             player.playVideo();
           }
@@ -286,7 +333,6 @@
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'videoId=' + encodeURIComponent(videoId)
       });
-      document.getElementById('videoId').value = '';
     }
 
     function extractYouTubeId(input) {
