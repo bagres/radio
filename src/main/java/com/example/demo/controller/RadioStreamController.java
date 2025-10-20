@@ -28,12 +28,12 @@ public class RadioStreamController {
 
     private Future<?> playlistFuture;
     private final Queue<String> youtubePlaylist = new ConcurrentLinkedQueue<>();
-
+//Testando auto deploy
     private volatile String currentVideoId = null;
 
     // NOVO: Timestamp Unix em ms de quando o vídeo atual começou a tocar
     private volatile long currentVideoStartTimeMs = 0;
-
+//Mudanca para testar auto-deploy
     @PostConstruct
     public void init() {
         // Inicia o loop de gerenciamento da playlist e ARMAZENA O FUTURE
@@ -212,5 +212,12 @@ public class RadioStreamController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    // ===============================================
+// ENDPOINT 4: HEALTH CHECK / KEEP-ALIVE
+// ===============================================
+    @GetMapping("/radio/status")
+    public String statusCheck() {
+        return "OK";
     }
 }
