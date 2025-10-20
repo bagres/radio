@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>🎧 Rádio Spring Boot - YouTube (Sincronizada)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎧 Rádio Bagres 🐟 - YouTube (Sincronizada)</title>
     <style>
         /* ======== ESTILO GERAL ======== */
         body {
@@ -13,8 +14,9 @@
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100vh;
+          min-height: 100vh;
           margin: 0;
+          padding: 20px;
           overflow: hidden;
         }
 
@@ -25,6 +27,7 @@
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           animation: pulse 3s infinite alternate;
+          text-align: center;
         }
 
         @keyframes pulse {
@@ -51,6 +54,7 @@
           padding: 30px 40px;
           text-align: center;
           width: 350px;
+          max-width: 90%;
           transition: transform 0.3s ease;
         }
 
@@ -64,12 +68,14 @@
           font-size: 1.1em;
           font-weight: 500;
           color: #ccc;
+          word-break: break-word;
         }
 
         /* ======== BOTÕES ======== */
         .controls {
           display: flex;
           justify-content: center;
+          flex-wrap: wrap;
           gap: 15px;
           margin-top: 20px;
         }
@@ -113,8 +119,14 @@
           gap: 10px;
         }
 
+        label {
+          font-size: 0.9em;
+          color: #aaa;
+        }
+
         input[type="text"] {
-          width: 260px;
+          width: 100%;
+          max-width: 260px;
           padding: 10px;
           border-radius: 8px;
           border: 1px solid #555;
@@ -153,13 +165,48 @@
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+
+        /* ======== RESPONSIVIDADE ======== */
+        @media (max-width: 600px) {
+          h2 {
+            font-size: 1.6em;
+          }
+
+          .radio-container {
+            width: 95%;
+            padding: 25px 20px;
+          }
+
+          button {
+            width: 100%;
+            max-width: 200px;
+          }
+
+          input[type="text"] {
+            width: 90%;
+          }
+
+          #current-info {
+            font-size: 1em;
+          }
+        }
+
+        @media (min-width: 1200px) {
+          h2 {
+            font-size: 2.4em;
+          }
+
+          .radio-container {
+            width: 420px;
+          }
+        }
     </style>
 </head>
 <body>
 <div class="background-anim"></div>
 
 <div class="radio-container">
-    <h2>🎵 Rádio Bagres 🐟 </h2>
+    <h2>🎵 Rádio Bagres 🐟</h2>
 
     <div id="player"></div>
     <div id="current-info">Carregando rádio...</div>
@@ -176,125 +223,125 @@
     </form>
 </div>
 
-<!-- ========== SCRIPT ========== -->
 <script>
     var player;
     var currentVideoId = '';
     var isMuted = true;
 
+    // Carrega a API do YouTube
     var tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     var firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
     function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        height: '270',
-        width: '480',
-        videoId: '',
-        playerVars: {
-          'autoplay': 1,
-          'controls': 0,
-          'modestbranding': 1,
-          'rel': 0,
-          'mute': 1,
-          'disablekb': 1
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
-      });
+        player = new YT.Player('player', {
+            height: '270',
+            width: '480',
+            videoId: '',
+            playerVars: {
+                'autoplay': 1,
+                'controls': 0,
+                'modestbranding': 1,
+                'rel': 0,
+                'mute': 1,
+                'disablekb': 1
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
+            }
+        });
     }
 
     function onPlayerReady(event) {
-      event.target.playVideo();
-      connectToMetadataStream();
+        event.target.playVideo();
+        connectToMetadataStream();
     }
 
     function onPlayerStateChange(event) {
-      if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
-        player.playVideo();
-      }
-      if (event.data === YT.PlayerState.ENDED) {
-        skipSong();
-      }
+        if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
+            player.playVideo();
+        }
+        if (event.data === YT.PlayerState.ENDED) {
+            skipSong();
+        }
     }
 
     function toggleAudio() {
-      const audioButton = document.getElementById('audioToggle');
-      if (isMuted) {
-        player.unMute();
-        isMuted = false;
-        audioButton.innerText = 'Desativar Áudio';
-      } else {
-        player.mute();
-        isMuted = true;
-        audioButton.innerText = 'Ativar Áudio';
-      }
+        const audioButton = document.getElementById('audioToggle');
+        if (isMuted) {
+            player.unMute();
+            isMuted = false;
+            audioButton.innerText = 'Desativar Áudio';
+        } else {
+            player.mute();
+            isMuted = true;
+            audioButton.innerText = 'Ativar Áudio';
+        }
     }
 
     function connectToMetadataStream() {
-      const eventSource = new EventSource('/radio/metadata');
+        const eventSource = new EventSource('/radio/metadata');
 
-      eventSource.addEventListener("sync", function(event) {
-        try {
-          const data = JSON.parse(event.data);
-          const newVideoId = data.videoId;
-          const startTimeMs = data.startTime;
-          const elapsedTimeMs = Date.now() - startTimeMs;
-          let seekTimeSeconds = elapsedTimeMs / 1000 + 0.20;
-          if (seekTimeSeconds < 0) seekTimeSeconds = 0;
+        eventSource.addEventListener("sync", function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                const newVideoId = data.videoId;
+                const startTimeMs = data.startTime;
+                const elapsedTimeMs = Date.now() - startTimeMs;
+                let seekTimeSeconds = elapsedTimeMs / 1000 + 0.20;
+                if (seekTimeSeconds < 0) seekTimeSeconds = 0;
 
-          if (newVideoId !== currentVideoId) {
-            currentVideoId = newVideoId;
-            document.getElementById('current-info').innerText = `🎶 Tocando: ${newVideoId}`;
-            player.loadVideoById(newVideoId, seekTimeSeconds);
-            player.playVideo();
-          }
-        } catch (e) {
-          console.error("Erro ao processar dados de sincronização:", e);
-        }
-      });
+                if (newVideoId !== currentVideoId) {
+                    currentVideoId = newVideoId;
+                    document.getElementById('current-info').innerText = `🎶 Tocando: ${newVideoId}`;
+                    player.loadVideoById(newVideoId, seekTimeSeconds);
+                    player.playVideo();
+                }
+            } catch (e) {
+                console.error("Erro ao processar dados de sincronização:", e);
+            }
+        });
 
-      eventSource.onerror = function(err) {
-        console.error("SSE falhou. Tentando reconectar...", err);
-        eventSource.close();
-        setTimeout(connectToMetadataStream, 5000);
-      };
+        eventSource.onerror = function(err) {
+            console.error("SSE falhou. Tentando reconectar...", err);
+            eventSource.close();
+            setTimeout(connectToMetadataStream, 5000);
+        };
     }
 
     async function skipSong() {
-      document.getElementById('current-info').innerText = '⏭ Pulando música...';
-      try {
-        const response = await fetch('/radio/skip', { method: 'POST' });
-        if (response.ok) {
-          const message = await response.text();
-          console.log("Skip bem-sucedido:", message);
-        } else {
-          alert("Falha ao pular música.");
+        document.getElementById('current-info').innerText = '⏭ Pulando música...';
+        try {
+            const response = await fetch('/radio/skip', { method: 'POST' });
+            if (response.ok) {
+                const message = await response.text();
+                console.log("Skip bem-sucedido:", message);
+            } else {
+                alert("Falha ao pular música.");
+            }
+        } catch (error) {
+            alert("Erro de rede.");
         }
-      } catch (error) {
-        alert("Erro de rede.");
-      }
     }
 
     async function addMusic(urlMusic) {
-      const videoId = extractYouTubeId(urlMusic);
-      await fetch('/radio/add-youtube', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'videoId=' + encodeURIComponent(videoId)
-      });
-      document.getElementById('videoId').value = '';
+        const videoId = extractYouTubeId(urlMusic);
+        await fetch('/radio/add-youtube', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'videoId=' + encodeURIComponent(videoId)
+        });
+        document.getElementById('videoId').value = '';
     }
 
     function extractYouTubeId(input) {
-      const match = input.match(/[?&]v=([^&]+)/);
-      if (match) return match[1];
-      const shortMatch = input.match(/youtu\.be\/([^?&]+)/);
-      if (shortMatch) return shortMatch[1];
-      return input;
+        const match = input.match(/[?&]v=([^&]+)/);
+        if (match) return match[1];
+        const shortMatch = input.match(/youtu\.be\/([^?&]+)/);
+        if (shortMatch) return shortMatch[1];
+        return input;
     }
 </script>
 </body>
