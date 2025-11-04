@@ -220,4 +220,9 @@ public class RadioStreamController {
     public String statusCheck() {
         return "OK";
     }
+
+    @GetMapping("/radio-lista")
+    public Queue<String> listaMusicas(){
+        return youtubePlaylist;
+    }
 }
