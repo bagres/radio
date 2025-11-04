@@ -1,6 +1,8 @@
 package com.example.demo.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,13 +14,10 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.concurrent.ArrayBlockingQueue;
 
 @RestController
 public class RadioStreamController {
@@ -27,7 +26,7 @@ public class RadioStreamController {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private Future<?> playlistFuture;
-    private final Queue<String> youtubePlaylist = new ConcurrentLinkedQueue<>();
+    private final Queue<String> youtubePlaylist = new ArrayBlockingQueue<>(200);
 //Testando auto deploy
     private volatile String currentVideoId = null;
 
@@ -44,21 +43,25 @@ public class RadioStreamController {
     // ENDPOINT 1: Adicionar vídeo do YouTube
     // ===============================================
     @PostMapping("/radio/add-youtube")
-    public String addYoutubeAudio(@RequestParam("videoId") String urlOrVideoId) {
+    public ResponseEntity<String> addYoutubeAudio(@RequestParam("videoId") String urlOrVideoId) {
         if (urlOrVideoId == null || urlOrVideoId.isEmpty()) {
-            return "Erro: ID do vídeo inválido.";
+            return ResponseEntity.badRequest().body("Erro: ID do vídeo inválido.");
         }
 
         String videoId = extractVideoId(urlOrVideoId);
 
         if (videoId == null) {
-            return "Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.";
+            return ResponseEntity.badRequest().body("Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.");
         }
 
-        // Adiciona o ID à playlist
-        // Supondo que 'youtubePlaylist' é uma estrutura de fila (Queue) ou lista
-        youtubePlaylist.offer(videoId);
-        return "ID do YouTube adicionada à playlist: " + videoId;
+        boolean foiAdicionado = youtubePlaylist.offer(videoId);
+
+        if(foiAdicionado){
+            return ResponseEntity.ok("ID do Youtube adicionada à playList: " + videoId);
+        }else {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Erro: A fila da rádio está cheia! Tente novamente mais tarde.");
+        }
     }
 
     private String extractVideoId(String urlOrVideoId) {
