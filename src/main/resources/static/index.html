@@ -314,7 +314,11 @@
     async function skipSong() {
         document.getElementById('current-info').innerText = '⏭ Pulando música...';
         try {
-            const response = await fetch('/radio/skip', { method: 'POST' });
+            const response = await fetch('/radio/skip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'videoId=' + encodeURIComponent(currentVideoId)
+            });
             if (response.ok) {
                 const message = await response.text();
                 console.log("Skip bem-sucedido:", message);
@@ -325,6 +329,10 @@
             alert("Erro de rede.");
         }
     }
+    async function getPlaylist() {
+            const response = await fetch('/radio-lista');
+            console.log(await response.json());
+    }
 
     async function addMusic(urlMusic) {
         const videoId = extractYouTubeId(urlMusic);
@@ -334,6 +342,7 @@
             body: 'videoId=' + encodeURIComponent(videoId)
         });
         document.getElementById('videoId').value = '';
+        getPlaylist()
     }
 
     function extractYouTubeId(input) {
@@ -343,6 +352,7 @@
         if (shortMatch) return shortMatch[1];
         return input;
     }
+
 </script>
 </body>
 </html>
