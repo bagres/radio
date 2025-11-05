@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.service.RadioStreamService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,11 +29,15 @@ public class RadioStreamController {
 
     private Future<?> playlistFuture;
     private final Queue<String> youtubePlaylist = new ConcurrentLinkedQueue<>();
-//Testando auto deploy
-    private volatile String currentVideoId = null;
 
     // NOVO: Timestamp Unix em ms de quando o vídeo atual começou a tocar
     private volatile long currentVideoStartTimeMs = 0;
+
+    private final RadioStreamService service;
+
+    public RadioStreamController(RadioStreamService service) {
+        this.service = service;
+    }
 //Mudanca para testar auto-deploy
     @PostConstruct
     public void init() {
@@ -115,11 +120,11 @@ public class RadioStreamController {
         this.metadataListeners.add(emitter);
 
         // Envia o estado atual da rádio (ID e Tempo de Início)
-        if (currentVideoId != null) {
+        if (service.getCurrentVideoId() != null) {
             try {
                 // Cria o payload JSON para sincronização
                 String jsonPayload = String.format("{\"videoId\":\"%s\", \"startTime\":%d}",
-                        currentVideoId,
+                        service.getCurrentVideoId(),
                         currentVideoStartTimeMs);
 
                 // Envia o evento "sync"
@@ -141,8 +146,8 @@ public class RadioStreamController {
     // ENDPOINT 3: PULAR MÚSICA (Skip)
     // ===============================================
     @PostMapping("/radio/skip")
-    public String skipSong() {
-        if (playlistFuture != null) {
+    public String skipSong(@RequestParam("videoId") String videoId) {
+        if (playlistFuture != null && videoId.equals(service.getCurrentVideoId())) {
             // Cancela a thread atual. Isso lança a InterruptedException no loop e o acorda.
             boolean cancelled = playlistFuture.cancel(true);
 

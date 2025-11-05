@@ -314,7 +314,12 @@
     async function skipSong() {
         document.getElementById('current-info').innerText = '⏭ Pulando música...';
         try {
-            const response = await fetch('/radio/skip', { method: 'POST' });
+
+            const response = await fetch('/radio/skip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'videoId=' + encodeURIComponent(currentVideoId)
+            });
             if (response.ok) {
                 const message = await response.text();
                 console.log("Skip bem-sucedido:", message);
