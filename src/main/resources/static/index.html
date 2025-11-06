@@ -422,13 +422,14 @@
             try {
                 const data = JSON.parse(event.data);
                 const newVideoId = data.videoId;
+                const newTitle = data.title;
 
                 if (newVideoId === "RADIO_STOPPED_ID") {
                     if (currentVideoId !== newVideoId) {
                         if (player.getPlayerState() === YT.PlayerState.PLAYING || player.getPlayerState() === YT.PlayerState.BUFFERING) {
                             player.stopVideo();
                         }
-                        document.getElementById('current-info').innerText = `Rádio pausada. Fila vazia.`;
+                        document.getElementById('current-info').innerText = newTitle;
                         currentVideoId = newVideoId;
                     }
                     return;
@@ -441,7 +442,7 @@
 
                 if (newVideoId !== currentVideoId) {
                     currentVideoId = newVideoId;
-                    document.getElementById('current-info').innerText = `Tocando: ${newVideoId}`;
+                    document.getElementById('current-info').innerText = `Tocando: ${newTitle}`;
                     player.loadVideoById(newVideoId, seekTimeSeconds);
                     player.playVideo();
                 }
@@ -464,6 +465,27 @@
             eventSource.close();
             setTimeout(connectToMetadataStream, 5000);
         };
+    }
+
+    function updatePlaylistDisplay() {
+        fetch('/radio/playlist') // Endpoint que você criou no Java
+            .then(response => response.json())
+            .then(videoList => {
+                const listElement = document.getElementById('playlist-list');
+                listElement.innerHTML = '';
+
+                if (videoList.length === 0) {
+                    listElement.innerHTML = '<li>Nenhuma música na fila.</li>';
+                    return;
+                }
+
+                videoList.forEach(video => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = video.title;
+                    listElement.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Erro ao buscar playlist:', error));
     }
 
     async function skipSong() {
@@ -518,19 +540,21 @@
     listElement.innerHTML = '<li>Atualizando...</li>'; // Feedback de carregamento
 
     try {
-        // Assume que a rota '/radio-lista' retorna um array de strings (os IDs).
         const response = await fetch('/radio-lista');
-        const playlistIds = await response.json(); // playlistIds é um array de Strings
 
-        // Limpa a lista existente
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
+        const playlistIds = await response.json();
+
         listElement.innerHTML = '';
 
         if (playlistIds && playlistIds.length > 0) {
-            playlistIds.forEach((videoId, index) => { // videoId é o ID (string)
+            playlistIds.forEach((video, index) => {
                 const li = document.createElement('li');
 
-                // Exibe a posição na fila e o ID do vídeo
-                li.innerText = `${index + 1}. ${videoId}`;
+                li.innerText = `${index + 1}. ${video.title}`;
 
                 listElement.appendChild(li);
             });
