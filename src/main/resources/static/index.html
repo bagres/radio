@@ -422,6 +422,18 @@
             try {
                 const data = JSON.parse(event.data);
                 const newVideoId = data.videoId;
+
+                if (newVideoId === "RADIO_STOPPED_ID") {
+                    if (currentVideoId !== newVideoId) {
+                        if (player.getPlayerState() === YT.PlayerState.PLAYING || player.getPlayerState() === YT.PlayerState.BUFFERING) {
+                            player.stopVideo();
+                        }
+                        document.getElementById('current-info').innerText = `Rádio pausada. Fila vazia.`;
+                        currentVideoId = newVideoId;
+                    }
+                    return;
+                }
+
                 const startTimeMs = data.startTime;
                 const elapsedTimeMs = Date.now() - startTimeMs;
                 let seekTimeSeconds = elapsedTimeMs / 1000 + 0.20;

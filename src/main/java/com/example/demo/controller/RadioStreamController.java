@@ -172,6 +172,7 @@ public class RadioStreamController {
 
                 if (nextVideoId == null) {
                     System.out.println("Playlist vazia. Aguardando novos vídeos...");
+                    notifyMetadataUpdate("RADIO_STOPPED_ID", 0);
                     Thread.sleep(5000);
                     continue;
                 }
@@ -251,6 +252,26 @@ public class RadioStreamController {
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            }
+        });
+    }
+
+    private void notifyMetadataUpdate(String videoId, long startTimeMs) {
+        String payload;
+
+        if (videoId == null) {
+            videoId = "RADIO_STOPPED_ID";
+        }
+
+        payload = String.format("{\"videoId\":\"%s\", \"startTime\":%d}", videoId, startTimeMs);
+
+        metadataListeners.removeIf(emitter -> {
+            try {
+                emitter.send(SseEmitter.event().name("sync").data(payload, MediaType.APPLICATION_JSON));
+                return false;
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+                return true;
             }
         });
     }
