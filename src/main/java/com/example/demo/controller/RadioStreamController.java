@@ -104,7 +104,7 @@ public class RadioStreamController {
         if (service.getCurrentVideoId() != null) {
             try {
                 String jsonPayload = String.format("{\"videoId\":\"%s\", \"startTime\":%d}",
-                        service,
+                        service.getCurrentVideoId(),
                         currentVideoStartTimeMs);
 
                 emitter.send(SseEmitter.event().name("sync").data(jsonPayload, MediaType.APPLICATION_JSON));
