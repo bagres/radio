@@ -45,6 +45,40 @@
           overflow: hidden;
         }
 
+        #radio-title-main {
+          font-size: 2em;
+          margin-bottom: 15px;
+          animation: pulse 3s infinite alternate;
+          text-align: center;
+          /* Cor base */
+          color: #f0f0f0;
+        }
+
+        /* Aplica o gradiente APENAS ao texto principal */
+        #radio-title-main .title-text-gradient {
+          background: linear-gradient(90deg, #3498db, #9b59b6);
+          /* Propriedades que tornam o texto transparente e mostram o gradiente */
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          color: transparent; /* Fallback para navegadores sem -webkit- */
+          display: inline;
+        }
+
+        /* * CORREÇÃO PARA O EMOJI:
+         * Remove as propriedades de texto transparente e garante que a cor seja herdada
+         * ou definida para aparecer corretamente.
+         */
+        #radio-title-main .emoji-icon {
+          /* Remove a transparência forçada que esconde o emoji */
+          -webkit-text-fill-color: initial;
+          color: inherit;
+
+          /* Remove o clip de background que o emoji pode herdar */
+          -webkit-background-clip: initial;
+          background-clip: initial;
+        }
+
         /* ======== CARD PRINCIPAL ======== */
         .radio-container {
           background: rgba(0, 0, 0, 0.5);
@@ -200,13 +234,81 @@
             width: 420px;
           }
         }
+
+        /* ======== ESTILO PLAYLIST ======== */
+        .playlist-container {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            padding: 20px 30px;
+            margin-top: 25px;
+            width: 350px;
+            max-width: 90%;
+        }
+
+        .playlist-container h3 {
+            font-size: 1.4em;
+            color: #3498db;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #playlist-ul {
+            list-style: none;
+            padding: 0;
+            max-height: 250px; /* Limita a altura para que a lista tenha scroll */
+            overflow-y: auto;
+        }
+
+        /* Estilos para a barra de rolagem (Scrollbar) */
+        #playlist-ul::-webkit-scrollbar {
+            width: 6px;
+        }
+        #playlist-ul::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 3px;
+        }
+        #playlist-ul::-webkit-scrollbar-track {
+            background: #111;
+            border-radius: 3px;
+        }
+
+
+        #playlist-ul li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #333;
+            font-size: 0.9em;
+            color: #eee;
+            word-break: break-word;
+        }
+
+        #playlist-ul li:last-child {
+            border-bottom: none;
+        }
+
+        #refreshButton {
+            background: #9b59b6;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        #refreshButton:hover {
+            background: #8e44ad;
+        }
     </style>
 </head>
 <body>
 <div class="background-anim"></div>
 
 <div class="radio-container">
-    <h2>🎵 Rádio Bagres 🐟</h2>
+    <h2 id="radio-title-main">
+        <span class="emoji-icon">🎵</span>
+        <span class="title-text-gradient">Rádio Bagres</span>
+        <span class="emoji-icon">🐟</span>
+    </h2>
 
     <div id="player"></div>
     <div id="current-info">Carregando rádio...</div>
@@ -221,6 +323,14 @@
         <input id="videoId" name="videoId" type="text" placeholder="ex: https://youtu.be/abc123" required />
         <button type="submit">Adicionar</button>
     </form>
+</div>
+
+<div class="playlist-container">
+    <h3>Fila de músicas</h3>
+    <ul id="playlist-ul">
+        <li>Carregando lista...</li>
+    </ul>
+    <button id="refreshButton" onclick="renderPlaylist()">Atualizar Lista</button>
 </div>
 
 <script>
@@ -257,6 +367,7 @@
     function onPlayerReady(event) {
         event.target.playVideo();
         connectToMetadataStream();
+        renderPlaylist();
     }
 
     function onPlayerStateChange(event) {
@@ -295,7 +406,7 @@
 
                 if (newVideoId !== currentVideoId) {
                     currentVideoId = newVideoId;
-                    document.getElementById('current-info').innerText = `🎶 Tocando: ${newVideoId}`;
+                    document.getElementById('current-info').innerText = `Tocando: ${newVideoId}`;
                     player.loadVideoById(newVideoId, seekTimeSeconds);
                     player.playVideo();
                 }
@@ -328,6 +439,7 @@
         } catch (error) {
             alert("Erro de rede.");
         }
+        renderPlaylist();
     }
     async function getPlaylist() {
             const response = await fetch('/radio-lista');
@@ -342,8 +454,38 @@
             body: 'videoId=' + encodeURIComponent(videoId)
         });
         document.getElementById('videoId').value = '';
-        getPlaylist()
+        renderPlaylist();
     }
+
+    async function renderPlaylist() {
+    const listElement = document.getElementById('playlist-ul');
+    listElement.innerHTML = '<li>Atualizando...</li>'; // Feedback de carregamento
+
+    try {
+        // Assume que a rota '/radio-lista' retorna um array de strings (os IDs).
+        const response = await fetch('/radio-lista');
+        const playlistIds = await response.json(); // playlistIds é um array de Strings
+
+        // Limpa a lista existente
+        listElement.innerHTML = '';
+
+        if (playlistIds && playlistIds.length > 0) {
+            playlistIds.forEach((videoId, index) => { // videoId é o ID (string)
+                const li = document.createElement('li');
+
+                // Exibe a posição na fila e o ID do vídeo
+                li.innerText = `${index + 1}. ${videoId}`;
+
+                listElement.appendChild(li);
+            });
+        } else {
+            listElement.innerHTML = '<li>A fila está vazia.</li>';
+        }
+    } catch (error) {
+        console.error("Erro ao carregar a playlist:", error);
+        listElement.innerHTML = '<li>Erro ao carregar a lista.</li>';
+    }
+}
 
     function extractYouTubeId(input) {
         const match = input.match(/[?&]v=([^&]+)/);
