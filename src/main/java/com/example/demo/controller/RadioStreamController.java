@@ -16,6 +16,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -23,9 +24,30 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.text.Normalizer;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 public class RadioStreamController {
+
+    private static final Set<String> ALLOWED_AUTHORS;
+
+    static {
+        String[] authorList = {
+                "Ícaro e Gilmar",
+                "Chitãozinho & Xororó",
+                "Maiara & Maraisa",
+                "Henrique e Juliano",
+                "Zé Neto e Cristiano",
+                "Bruno & Marrone"
+        };
+
+        ALLOWED_AUTHORS = Arrays.stream(authorList)
+                .map(RadioStreamController::normalizeString)
+                .collect(Collectors.toSet());
+    }
 
     private final CopyOnWriteArrayList<SseEmitter> metadataListeners = new CopyOnWriteArrayList<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -60,8 +82,8 @@ public class RadioStreamController {
             return "Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.";
         }
 
-        String title = getTitleFromYoutube(videoId);
-        VideoInfo newVideo = new VideoInfo(videoId, title);
+        VideoDetails details = getDetailsFromYoutube(videoId);
+        VideoInfo newVideo = new VideoInfo(videoId, details.title, details.statusMessage);
 
         youtubePlaylist.offer(newVideo);
 
@@ -75,20 +97,41 @@ public class RadioStreamController {
             }
         });
 
-        return "Música adicionada à playlist: " + title;
+        return "Música adicionada à playlist (" + details.statusMessage + "): " + details.title;
     }
 
-    private String getTitleFromYoutube(String videoId) {
+    private VideoDetails getDetailsFromYoutube(String videoId) {
         String oembedUrl = "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=" + videoId + "&format=json";
+
+        String title = "Título não encontrado";
+        String authorName = null;
+        String statusMessage = "Erro ao buscar detalhes.";
 
         try {
             Map<String, Object> result = restTemplate.getForObject(oembedUrl, Map.class);
 
-            return (String) result.get("title");
+            title = (String) result.get("title");
+            authorName = (String) result.get("author_name");
+
+            if (authorName != null && !authorName.isEmpty()) {
+
+                String normalizedAuthor = normalizeString(authorName);
+
+                if (ALLOWED_AUTHORS.contains(normalizedAuthor)) {
+                    statusMessage = "Aí sim, essa é a pura";
+                } else {
+                    statusMessage = "Essa música é de bagre.";
+                }
+            } else {
+                statusMessage = "Autor não encontrado para verificação.";
+            }
+
         } catch (Exception e) {
-            System.err.println("Erro ao buscar título do vídeo " + videoId + ": " + e.getMessage());
-            return "Título não encontrado";
+            System.err.println("Erro ao buscar detalhes do vídeo " + videoId + ": " + e.getMessage());
+            title = "Falha ao carregar título";
         }
+
+        return new VideoDetails(title, authorName, statusMessage);
     }
 
     private String extractVideoId(String urlOrVideoId) {
@@ -121,6 +164,23 @@ public class RadioStreamController {
         return null;
     }
 
+    public static String normalizeString(String input) {
+        if (input == null) {
+            return "";
+        }
+        String normalized = input.toLowerCase();
+
+        normalized = Normalizer.normalize(normalized, Normalizer.Form.NFD);
+
+        normalized = normalized.replaceAll("[^\\p{ASCII}]", "");
+
+        normalized = normalized.replaceAll("[^a-z0-9\\s]", "");
+
+        normalized = normalized.replaceAll("\\s+", " ").trim();
+
+        return normalized;
+    }
+
     // ATUALIZADO: Envia JSON com ID e Tempo de Início (startTime)
     @GetMapping(value = "/radio/metadata", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamMetadata() {
@@ -151,10 +211,12 @@ public class RadioStreamController {
         String currentVideoId = service.getCurrentVideoId();
 
         if (currentVideoId != null) {
-            String currentTitle = getTitleFromYoutube(currentVideoId);
+            VideoDetails currentDetails = getDetailsFromYoutube(currentVideoId);
+            String currentTitle = currentDetails.title;
+            String currentStatus = currentDetails.statusMessage;
 
             try {
-                notifyMetadataUpdate(currentVideoId, currentTitle, currentVideoStartTimeMs);
+                notifyMetadataUpdate(currentVideoId, currentTitle, currentStatus, currentVideoStartTimeMs);
 
             } catch (Exception e) {
                 System.err.println("Falha ao enviar evento de sincronização inicial. Cliente desconectou.");
@@ -163,7 +225,7 @@ public class RadioStreamController {
                 return emitter;
             }
         } else {
-            notifyMetadataUpdate("RADIO_STOPPED_ID", null, 0);
+            notifyMetadataUpdate("RADIO_STOPPED_ID", null, null, 0);
         }
 
         return emitter;
@@ -193,22 +255,24 @@ public class RadioStreamController {
             while (true) {
                 VideoInfo nextVideoInfo = youtubePlaylist.poll();
                 String currentTitle;
+                String currentStatus = null;
 
                 if (nextVideoInfo == null) {
                     System.out.println("Playlist vazia. Aguardando novos vídeos...");
-                    notifyMetadataUpdate("RADIO_STOPPED_ID", null, 0);
+                    notifyMetadataUpdate("RADIO_STOPPED_ID", null, null,0);
                     Thread.sleep(5000);
                     continue;
                 } else {
                     service.setCurrentVideoId(nextVideoInfo.getVideoId());
                     currentTitle = nextVideoInfo.getTitle();
+                    currentStatus = nextVideoInfo.getStatus();
                     currentVideoStartTimeMs = System.currentTimeMillis();
                 }
 
 
                 System.out.println("Trocando para novo vídeo: " + service.getCurrentVideoId() + " | Tempo de início: " + currentVideoStartTimeMs);
 
-                notifyMetadataUpdate(service.getCurrentVideoId(), currentTitle, currentVideoStartTimeMs);
+                notifyMetadataUpdate(service.getCurrentVideoId(), currentTitle, currentStatus, currentVideoStartTimeMs);
 
                 try {
                     long maxWaitTime = 20 * 60 * 1000;
@@ -268,24 +332,33 @@ public class RadioStreamController {
         });
     }
 
-    private void notifyMetadataUpdate(String videoId, String title, long startTimeMs) {
+    private void notifyMetadataUpdate(String videoId, String title, String status, long startTimeMs) {
         String finalTitle;
         String finalVideoId = videoId;
+        String finalStatus = status;
 
         if (finalVideoId == null || finalVideoId.equals("RADIO_STOPPED_ID")) {
             finalVideoId = "RADIO_STOPPED_ID";
             finalTitle = "Rádio pausada. Fila vazia.";
+            finalStatus = "Aguardando músicas.";
         }
         else if (title == null || title.isEmpty()) {
             finalTitle = "Título desconhecido (ID: " + finalVideoId + ")";
+            if (finalStatus == null || finalStatus.isEmpty()) {
+                finalStatus = "Verificação pendente ou falhou.";
+            }
         } else {
             finalTitle = title;
+            if (finalStatus == null || finalStatus.isEmpty()) {
+                finalStatus = "Status Indefinido";
+            }
         }
 
         String escapedTitle = finalTitle.replace("\"", "\\\"");
+        String escapedStatus = finalStatus.replace("\"", "\\\"");
 
-        String payload = String.format("{\"videoId\":\"%s\", \"title\":\"%s\", \"startTime\":%d}",
-                finalVideoId, escapedTitle, startTimeMs);
+        String payload = String.format("{\"videoId\":\"%s\", \"title\":\"%s\", \"statusMessage\":\"%s\", \"startTime\":%d}",
+                finalVideoId, escapedTitle, escapedStatus, startTimeMs); // <-- Adicionado escapedStatus
 
         metadataListeners.removeIf(emitter -> {
             try {
@@ -312,5 +385,17 @@ public class RadioStreamController {
     @GetMapping("/radio/listeners")
     public int getListenerCount() {
         return metadataListeners.size();
+    }
+
+    public class VideoDetails {
+        public final String title;
+        public final String authorName;
+        public final String statusMessage;
+
+        public VideoDetails(String title, String authorName, String statusMessage) {
+            this.title = title;
+            this.authorName = authorName;
+            this.statusMessage = statusMessage;
+        }
     }
 }

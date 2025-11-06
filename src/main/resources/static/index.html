@@ -323,6 +323,8 @@
 <body>
 <div class="background-anim"></div>
 
+<div id="radio-status-message" style="font-size: 1.2em; font-weight: bold; margin-bottom: 5px;"> </div>
+
 <div class="radio-container">
     <h2 id="radio-title-main">
         <span class="emoji-icon">🎵</span>
@@ -417,12 +419,16 @@
 
     function connectToMetadataStream() {
         const eventSource = new EventSource('/radio/metadata');
+        const statusElement = document.getElementById('radio-status-message');
 
         eventSource.addEventListener("sync", function(event) {
             try {
                 const data = JSON.parse(event.data);
                 const newVideoId = data.videoId;
+                const statusMessage = data.statusMessage;
                 const newTitle = data.title;
+
+                statusElement.innerText = statusMessage || "Sincronizando...";
 
                 if (newVideoId === "RADIO_STOPPED_ID") {
                     if (currentVideoId !== newVideoId) {
@@ -442,7 +448,7 @@
 
                 if (newVideoId !== currentVideoId) {
                     currentVideoId = newVideoId;
-                    document.getElementById('current-info').innerText = `Tocando: ${newTitle}`;
+                    document.getElementById('current-info').innerText = `${newTitle}`;
                     player.loadVideoById(newVideoId, seekTimeSeconds);
                     player.playVideo();
                 }
