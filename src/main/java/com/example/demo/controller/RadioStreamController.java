@@ -236,6 +236,18 @@ public class RadioStreamController {
                             return true;
                         }
                     });
+
+                    String countPayload = String.valueOf(metadataListeners.size());
+
+                    metadataListeners.removeIf(emitter -> {
+                        try {
+                            emitter.send(SseEmitter.event().name("listener_count").data(countPayload));
+                            return false;
+                        } catch (IOException e) {
+                            emitter.completeWithError(e);
+                            return true;
+                        }
+                    });
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

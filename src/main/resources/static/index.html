@@ -391,7 +391,6 @@
         event.target.playVideo();
         connectToMetadataStream();
         renderPlaylist();
-        updateListenerCount();
     }
 
     function onPlayerStateChange(event) {
@@ -437,6 +436,10 @@
             } catch (e) {
                 console.error("Erro ao processar dados de sincronização:", e);
             }
+        });
+
+        eventSource.addEventListener("listener_count", function(event) {
+            document.getElementById('listener-count').innerText = event.data;
         });
 
         eventSource.addEventListener("playlist_update", function(event) {
