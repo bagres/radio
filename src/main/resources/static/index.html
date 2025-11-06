@@ -105,6 +105,21 @@
           word-break: break-word;
         }
 
+        /* ======== ESTILO CONTADOR DE OUVINTES ======== */
+        .listener-info-container {
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: #3498db; /* Cor azul de destaque */
+            text-align: center;
+        }
+
+        #listener-count {
+            font-weight: 700; /* Deixa o número em negrito */
+            color: #2ecc71; /* Cor verde para destaque */
+            margin-left: 5px;
+        }
+
         /* ======== BOTÕES ======== */
         .controls {
           display: flex;
@@ -312,6 +327,9 @@
 
     <div id="player"></div>
     <div id="current-info">Carregando rádio...</div>
+    <div class="listener-info-container">
+        Ouvintes Ativos: <span id="listener-count">0</span>
+    </div>
 
     <div class="controls">
         <button id="audioToggle" onclick="toggleAudio()">Ativar Áudio</button>
@@ -368,6 +386,7 @@
         event.target.playVideo();
         connectToMetadataStream();
         renderPlaylist();
+        updateListenerCount();
     }
 
     function onPlayerStateChange(event) {
@@ -415,6 +434,11 @@
             }
         });
 
+        eventSource.addEventListener("playlist_update", function(event) {
+            console.log("Evento de atualização de playlist recebido. Atualizando lista...");
+            renderPlaylist();
+        });
+
         eventSource.onerror = function(err) {
             console.error("SSE falhou. Tentando reconectar...", err);
             eventSource.close();
@@ -445,6 +469,18 @@
             const response = await fetch('/radio-lista');
             console.log(await response.json());
     }
+
+    async function updateListenerCount() {
+    try {
+        const response = await fetch('/radio/listeners');
+        const count = await response.json();
+
+        document.getElementById('listener-count').innerText = count;
+    } catch (error) {
+        console.error("Erro ao buscar contagem de ouvintes:", error);
+        document.getElementById('listener-count').innerText = "Erro";
+    }
+}
 
     async function addMusic(urlMusic) {
         const videoId = extractYouTubeId(urlMusic);

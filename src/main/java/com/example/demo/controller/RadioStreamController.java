@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 public class RadioStreamController {
 
     private final CopyOnWriteArrayList<SseEmitter> metadataListeners = new CopyOnWriteArrayList<>();
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     private Future<?> playlistFuture;
     private final Queue<String> youtubePlaylist = new ConcurrentLinkedQueue<>();
@@ -39,6 +39,7 @@ public class RadioStreamController {
     @PostConstruct
     public void init() {
         playlistFuture = executor.submit(this::playlistManagerLoop);
+        startKeepAliveLoop();
     }
 
     // ENDPOINT 1: Adicionar vídeo do YouTube
@@ -55,6 +56,17 @@ public class RadioStreamController {
         }
 
         youtubePlaylist.offer(videoId);
+
+        metadataListeners.removeIf(emitter -> {
+            try {
+                emitter.send(SseEmitter.event().name("playlist_update").data("true"));
+                return false;
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+                return true;
+            }
+        });
+
         return "ID do YouTube adicionada à playlist: " + videoId;
     }
 
@@ -98,8 +110,22 @@ public class RadioStreamController {
             this.metadataListeners.remove(emitter);
             emitter.complete();
         });
+        emitter.onError((e) -> {
+            this.metadataListeners.remove(emitter);
+            emitter.completeWithError(e);
+        });
 
         this.metadataListeners.add(emitter);
+
+        try {
+            emitter.send(SseEmitter.event().comment("Conexão estabelecida com sucesso."));
+
+        } catch (IOException e) {
+            System.err.println("Falha no keep-alive inicial. Cliente desconectou imediatamente.");
+            this.metadataListeners.remove(emitter);
+            emitter.completeWithError(e);
+            return emitter;
+        }
 
         if (service.getCurrentVideoId() != null) {
             try {
@@ -166,19 +192,55 @@ public class RadioStreamController {
                         emitter.send(SseEmitter.event().name("sync").data(jsonPayload, MediaType.APPLICATION_JSON));
                         return false;
                     } catch (IOException e) {
-                        System.out.println("Cliente SSE desconectado (ID: " + service.getCurrentVideoId() + "). Removendo emitter.");
                         emitter.completeWithError(e);
                         return true;
                     }
                 });
 
-                Thread.sleep(Long.MAX_VALUE);
+                try {
+                    long maxWaitTime = 20 * 60 * 1000;
+                    long interval = 500;
+                    long waitedTime = 0;
+
+                    while (waitedTime < maxWaitTime) {
+                        Thread.sleep(interval);
+                        waitedTime += interval;
+                    }
+                    System.out.println("Música completou o tempo máximo. Passando para a próxima.");
+
+                } catch (InterruptedException e) {
+                    // Interrompido pelo método skipSong(). Saímos do loop interno e do while(true).
+                    throw e;
+                }
             }
         } catch (InterruptedException e) {
             System.out.println("O loop da playlist foi interrompido (Skip acionado). Indo para o próximo vídeo.");
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void startKeepAliveLoop() {
+        executor.submit(() -> {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    Thread.sleep(3000);
+
+                    metadataListeners.removeIf(emitter -> {
+                        try {
+                            emitter.send(SseEmitter.event().comment("keep-alive"));
+                            return false;
+                        } catch (Exception e) {
+                            System.out.println("Keep-Alive falhou. Cliente SSE desconectado. Removendo emitter.");
+                            emitter.complete();
+                            return true;
+                        }
+                    });
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
 // ENDPOINT 4: HEALTH CHECK / KEEP-ALIVE
@@ -190,5 +252,10 @@ public class RadioStreamController {
     @GetMapping("/radio-lista")
     public Queue<String> listaMusicas(){
         return youtubePlaylist;
+    }
+
+    @GetMapping("/radio/listeners")
+    public int getListenerCount() {
+        return metadataListeners.size();
     }
 }
