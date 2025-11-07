@@ -2,7 +2,9 @@ package com.example.demo.service;
 
 import com.example.demo.info.VideoInfo;
 import lombok.Data;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -26,22 +28,13 @@ import java.util.stream.Collectors;
 @Data
 public class RadioStreamService {
 
-    public class VideoDetails {
-        public final String title;
-        public final String authorName;
-        public final String statusMessage;
-
-        public VideoDetails(String title, String authorName, String statusMessage) {
-            this.title = title;
-            this.authorName = authorName;
-            this.statusMessage = statusMessage;
-        }
+    public record VideoDetails(String title, String authorName, String statusMessage) {
     }
 
     private volatile String currentVideoId = null;
     private volatile long currentVideoStartTimeMs = 0;
     private Future<?> playlistFuture;
-    private final Queue<VideoInfo> youtubePlaylist = new ConcurrentLinkedQueue<>();
+    private final Queue<VideoInfo> youtubePlaylist = new ArrayBlockingQueue<>(200);
     private final RestTemplate restTemplate = new RestTemplate();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final CopyOnWriteArrayList<SseEmitter> metadataListeners = new CopyOnWriteArrayList<>();
@@ -49,11 +42,14 @@ public class RadioStreamService {
     static {
         String[] authorList = {
                 "Ícaro e Gilmar",
-                "Chitãozinho & Xororó",
-                "Maiara & Maraisa",
                 "Henrique e Juliano",
                 "Zé Neto e Cristiano",
-                "Bruno & Marrone"
+                "Bruno & Marrone",
+                "EduardoCostaVEVO",
+                "ZezeeLucianoVEVO",
+                "Panda Cantor",
+                "Humberto e Ronaldo",
+                "Cê tá doido Festival"
         };
 
         ALLOWED_AUTHORS = Arrays.stream(authorList)
@@ -260,10 +256,6 @@ public class RadioStreamService {
         });
     }
 
-    public long getCurrentVideoStartTimeMs() {
-        return currentVideoStartTimeMs;
-    }
-
     public static String normalizeString(String input) {
         if (input == null) {
             return "";
@@ -283,7 +275,7 @@ public class RadioStreamService {
         String statusMessage = "Erro ao buscar detalhes.";
 
         try {
-            Map<String, Object> result = restTemplate.getForObject(oembedUrl, Map.class);
+            Map result = restTemplate.getForObject(oembedUrl, Map.class);
             title = (String) result.get("title");
             authorName = (String) result.get("author_name");
 
@@ -325,26 +317,32 @@ public class RadioStreamService {
                     }
                 }
             }
-        } catch (MalformedURLException e) {
+        } catch (MalformedURLException ignored) {
         }
         return null;
     }
 
-    public String addMusicToPlaylist(String urlOrVideoId) {
+    public ResponseEntity<String> addMusicToPlaylist(String urlOrVideoId) {
         if (urlOrVideoId == null || urlOrVideoId.isEmpty()) {
-            return "Erro: ID do vídeo inválido.";
+            return ResponseEntity.badRequest().body("Erro: ID do vídeo inválido.");
         }
 
         String videoId = extractVideoId(urlOrVideoId);
 
         if (videoId == null) {
-            return "Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.";
+            return ResponseEntity.badRequest().body("Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.");
         }
 
         VideoDetails details = getDetailsFromYoutube(videoId);
         VideoInfo newVideo = new VideoInfo(videoId, details.title, details.statusMessage);
 
-        youtubePlaylist.offer(newVideo);
+        boolean added = youtubePlaylist.offer(newVideo);
+
+        if (!added) {
+            return ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Erro: A playlist atingiu o limite máximo de 200 músicas. Tente novamente mais tarde.");
+        }
 
         this.metadataListeners.removeIf(emitter -> {
             try {
@@ -356,7 +354,7 @@ public class RadioStreamService {
             }
         });
 
-        return "Música adicionada à playlist (" + details.statusMessage + "): " + details.title;
+        return ResponseEntity.ok("Música adicionada à playlist (" + details.statusMessage + "): " + details.title);
     }
 
     public Queue<VideoInfo> getPlaylist() {
