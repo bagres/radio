@@ -318,6 +318,8 @@
                 gap: 20px;
                 width: 100%;
                 margin: 20px auto;
+                margin: 20px auto;
+                align-items: center;
             }
 
             #radio-and-playlist-wrapper {
@@ -347,29 +349,38 @@
             }
 
             #chat-form {
+                display: flex; /* Adicionado display: flex, se não estiver no CSS base */
                 flex-direction: column;
-                align-items: center;
+                gap: 10px; /* Adiciona espaçamento entre o bloco de inputs e o botão */
+                align-items: stretch;
             }
             #chat-inputs-wrapper {
                 width: 100%;
                 flex-direction: column;
+                gap: 5px;
             }
             #chat-sender,
-            #chat-input,
-            #chat-form button {
-                width: 100%;
-                height: auto;
-                max-width: none;
+            #chat-input {
+                width: 100% !important; /* Inputs dentro do wrapper */
                 box-sizing: border-box;
-            }
-            #chat-form button {
                 height: auto;
+            }
+
+            #chat-form button {
+                /* O botão fica sozinho numa linha abaixo dos inputs */
+                width: fit-content !important; /* Ocupa apenas o espaço necessário */
+                height: auto !important;
+                max-width: none !important;
+                box-sizing: border-box;
+                /* Alinha o botão à direita */
+                align-self: flex-end;
+                padding: 10px 20px; /* Garante que o botão tenha um tamanho visível */
             }
 
             .controls button,
             #refreshButton {
                 width: 100%;
-                max-width: none; /* Remove restrições de largura de 200px */
+                max-width: none;
             }
         }
 
@@ -457,13 +468,18 @@
         @media (max-width: 600px) {
             #chat-form {
                 flex-wrap: wrap;
+                display: flex;
+                flex-direction: column;
+                gap: 10px
             }
             #chat-sender, #chat-input {
                 width: 100% !important;
                 box-sizing: border-box;
             }
             #chat-form button {
-                width: 100% !important;
+                width: fit-content;
+                align-self: flex-end;
+                padding: 10px 20px;
                 max-width: none !important;
             }
         }
