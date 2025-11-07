@@ -532,7 +532,7 @@
 
     async function addMusic(urlMusic) {
         const videoId = extractYouTubeId(urlMusic);
-        await fetch('/radio/add-youtube', {
+        fetch('/radio/add-youtube', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'videoId=' + encodeURIComponent(videoId)
