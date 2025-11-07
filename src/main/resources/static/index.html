@@ -10,14 +10,30 @@
           background: linear-gradient(135deg, #1a1a1a, #222, #111);
           color: #f0f0f0;
           font-family: "Poppins", Arial, sans-serif;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+
           min-height: 100vh;
           margin: 0;
           padding: 20px;
           overflow-y: auto;
+          text-align: center;
+        }
+
+        #app-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 25px;
+            margin: 25px auto;
+            width: fit-content
+            flex-wrap: wrap;
+        }
+
+        #radio-and-playlist-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            justify-content: flex-start;
+            align-items: center;
         }
 
         h2 {
@@ -79,6 +95,15 @@
           background-clip: initial;
         }
 
+        #main-content-wrapper {
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
+            margin: 0 auto 25px auto;
+            flex-wrap: wrap;
+            max-width: 900px;
+        }
+
         /* ======== CARD PRINCIPAL ======== */
         .radio-container {
           background: rgba(0, 0, 0, 0.5);
@@ -88,8 +113,10 @@
           padding: 30px 40px;
           text-align: center;
           width: 350px;
-          max-width: 90%;
+          max-width: 100%;
           transition: transform 0.3s ease;
+          height: fit-content;
+          box-sizing: border-box;
         }
 
         .radio-container:hover {
@@ -255,6 +282,192 @@
           }
         }
 
+        .chat-container {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            padding: 20px 30px 100px 30px;
+            margin-top: 0;
+            width: 350px;
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        @media (min-width: 1200px) {
+            .radio-container,
+            .chat-container,
+            .playlist-container {
+                width: 420px;
+            }
+
+            /* Título maior */
+            h2 {
+                font-size: 2.4em;
+            }
+
+            #app-wrapper {
+                max-width: 900px;
+            }
+        }
+
+        @media (max-width: 800px) {
+            #app-wrapper {
+                flex-direction: column;
+                gap: 20px;
+                width: 100%;
+                margin: 20px auto;
+            }
+
+            #radio-and-playlist-wrapper {
+                gap: 20px;
+                width: 100%;
+            }
+
+            .radio-container,
+            .chat-container,
+            .playlist-container {
+                width: 100%;
+                padding: 25px 20px;
+                box-sizing: border-box;
+            }
+
+            h2 {
+              font-size: 1.6em; /* Vindo da regra antiga de 600px */
+            }
+
+            #current-info {
+              font-size: 1em; /* Vindo da regra antiga de 600px */
+            }
+
+            input[type="text"] {
+              width: 100%;
+              max-width: none;
+            }
+
+            #chat-form {
+                flex-direction: column;
+                align-items: center;
+            }
+            #chat-inputs-wrapper {
+                width: 100%;
+                flex-direction: column;
+            }
+            #chat-sender,
+            #chat-input,
+            #chat-form button {
+                width: 100%;
+                height: auto;
+                max-width: none;
+                box-sizing: border-box;
+            }
+            #chat-form button {
+                height: auto;
+            }
+
+            .controls button,
+            #refreshButton {
+                width: 100%;
+                max-width: none; /* Remove restrições de largura de 200px */
+            }
+        }
+
+        /* ======== CHAT ESTILOS ======== */
+        .chat-container {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            padding: 20px 30px 21px 30px;
+            margin-top: 0px;
+            width: 350px;
+            max-width: 100%;
+        }
+        .chat-container h3 {
+            font-size: 1.4em;
+            color: #f39c12; /* Cor de destaque para o chat */
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        #chat-messages {
+            list-style: none;
+            padding: 0;
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 5px;
+            background: #1e1e1e;
+            margin-bottom: 0 !important;
+            text-align: left;
+        }
+        #chat-messages li {
+            padding: 5px 0;
+            font-size: 0.9em;
+            color: #eee;
+            word-break: break-word;
+        }
+        #chat-form {
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+            margin-top: 5px;
+            width: 100%;
+        }
+        #chat-input, #chat-sender {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background: #222;
+            color: #eee;
+            font-size: 0.9em;
+            width: 100%;
+            flex-grow: 1;
+            box-sizing: border-box;
+        }
+        #chat-sender {
+            flex-basis: 30%;
+        }
+        #chat-input {
+            flex-basis: 70%;
+        }
+        #chat-form button {
+            background: #f39c12;
+            padding: 8px 10px;
+            font-size: 0.9em;
+            align-self: flex-start;
+            width: auto;
+            height: 100%;
+            flex-shrink: 0;
+        }
+        #chat-form button:hover {
+            background: #e67e22;
+        }
+        #chat-inputs-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex-grow: 1;
+        }
+
+        /* RESPONSIVIDADE CHAT */
+        @media (max-width: 600px) {
+            #chat-form {
+                flex-wrap: wrap;
+            }
+            #chat-sender, #chat-input {
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            #chat-form button {
+                width: 100% !important;
+                max-width: none !important;
+            }
+        }
+
         /* ======== ESTILO PLAYLIST ======== */
         .playlist-container {
             background: rgba(0, 0, 0, 0.7);
@@ -262,7 +475,7 @@
             border-radius: 20px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
             padding: 20px 30px;
-            margin-top: 25px;
+            margin-top: 0px;
             width: 350px;
             max-width: 90%;
         }
@@ -319,43 +532,65 @@
             background: #8e44ad;
         }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
 </head>
 <body>
 <div class="background-anim"></div>
 
 <div id="radio-status-message" style="font-size: 1.2em; font-weight: bold; margin-bottom: 5px;"> </div>
 
-<div class="radio-container">
-    <h2 id="radio-title-main">
-        <span class="emoji-icon">🎵</span>
-        <span class="title-text-gradient">Rádio Bagres</span>
-        <span class="emoji-icon">🐟</span>
-    </h2>
+<div id="app-wrapper">
 
-    <div id="player"></div>
-    <div id="current-info">Carregando rádio...</div>
-    <div class="listener-info-container">
-        Ouvintes Ativos: <span id="listener-count">0</span>
+    <div class="chat-container">
+        <h3>Chat</h3>
+        <ul id="chat-messages">
+            <li>Conectando ao chat...</li>
+        </ul>
+        <form id="chat-form" onsubmit="event.preventDefault(); sendMessage();">
+            <div id="chat-inputs-wrapper"> <input id="chat-sender" type="text" placeholder="Seu nome" required />
+                <input id="chat-input" type="text" placeholder="Digite sua mensagem..." required />
+            </div>
+            <button type="submit">Enviar</button>
+        </form>
     </div>
 
-    <div class="controls">
-        <button id="audioToggle" onclick="toggleAudio()">Ativar Áudio</button>
-        <button id="skipButton" onclick="skipSong()">⏭ Pular Música</button>
+    <div id="radio-and-playlist-wrapper">
+        <div class="radio-container">
+            <h2 id="radio-title-main">
+                <span class="title-text-gradient">Rádio Bagres</span>
+                <span class="emoji-icon">🐟</span>
+            </h2>
+
+            <div id="player"></div>
+            <div id="current-info">Carregando rádio...</div>
+            <div class="listener-info-container">
+                Ouvintes Ativos: <span id="listener-count">0</span>
+            </div>
+
+            <div class="controls">
+                <button id="audioToggle" onclick="toggleAudio()">Ativar Áudio</button>
+                <button id="skipButton" onclick="skipSong()">⏭ Pular Música</button>
+            </div>
+
+            <form id="youtube-form" onsubmit="event.preventDefault(); addMusic(document.getElementById('videoId').value);">
+                <label for="videoId">YouTube URL ou Video ID:</label>
+                <input id="videoId" name="videoId" type="text" placeholder="ex: https://youtu.be/abc123" required />
+                <button type="submit">Adicionar</button>
+            </form>
+        </div>
+
+        <div class="playlist-container">
+            <h3>Fila de músicas</h3>
+            <ul id="playlist-ul">
+                <li>Carregando lista...</li>
+            </ul>
+            <button id="refreshButton" onclick="renderPlaylist()">Atualizar Lista</button>
+        </div>
     </div>
 
-    <form id="youtube-form" onsubmit="event.preventDefault(); addMusic(document.getElementById('videoId').value);">
-        <label for="videoId">YouTube URL ou Video ID:</label>
-        <input id="videoId" name="videoId" type="text" placeholder="ex: https://youtu.be/abc123" required />
-        <button type="submit">Adicionar</button>
-    </form>
-</div>
-
-<div class="playlist-container">
-    <h3>Fila de músicas</h3>
-    <ul id="playlist-ul">
-        <li>Carregando lista...</li>
-    </ul>
-    <button id="refreshButton" onclick="renderPlaylist()">Atualizar Lista</button>
 </div>
 
 <script>
@@ -393,7 +628,13 @@
         event.target.playVideo();
         connectToMetadataStream();
         renderPlaylist();
+        connectChat();
+        syncChatHeight();
+        setTimeout(syncChatHeight, 500);
+        setTimeout(syncChatHeight, 1000);
     }
+
+    window.addEventListener('resize', syncChatHeight);
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
@@ -579,6 +820,130 @@
         const shortMatch = input.match(/youtu\.be\/([^?&]+)/);
         if (shortMatch) return shortMatch[1];
         return input;
+    }
+
+    var stompClient = null;
+    const chatMessagesElement = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const chatSender = document.getElementById('chat-sender');
+
+    function connectChat() {
+        const socket = new SockJS('/ws/chat');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, onConnected, onError);
+    }
+
+    function onConnected() {
+        console.log("Conectado ao WebSocket de chat!");
+        chatMessagesElement.innerHTML = '';
+
+        stompClient.subscribe('/topic/public', onMessageReceived);
+    }
+
+    function onError(error) {
+        console.error('Erro na conexão WebSocket:', error);
+        chatMessagesElement.innerHTML = '<li>Erro de conexão. Tentando reconectar...</li>';
+        setTimeout(connectChat, 5000);
+    }
+
+    function sendMessage() {
+        const sender = chatSender.value.trim();
+        const content = chatInput.value.trim();
+
+        if (!stompClient || !stompClient.connected) {
+            alert("Chat não conectado. Tente recarregar a página.");
+            return;
+        }
+
+        if (content && sender) {
+            const chatMessage = {
+                sender: sender,
+                content: content
+            };
+
+            stompClient.send("/app/sendMessage", {}, JSON.stringify(chatMessage));
+            chatInput.value = ''; // Limpa o input
+        }
+    }
+
+    function onMessageReceived(payload) {
+        const message = JSON.parse(payload.body);
+
+        const listItem = document.createElement('li');
+
+        listItem.innerHTML = `
+            <span style="color: #ccc;">[${message.timestamp || '??:??'}]</span>
+            <strong style="color: #f39c12;">${message.sender}:</strong>
+            ${message.content}
+        `;
+
+        chatMessagesElement.appendChild(listItem);
+        chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
+    }
+
+    function onPlayerReady(event) {
+        event.target.playVideo();
+        connectToMetadataStream();
+        renderPlaylist();
+        connectChat();
+        syncChatHeight();
+        setTimeout(syncChatHeight, 500);
+        setTimeout(syncChatHeight, 1500);
+    }
+
+    function syncChatHeight() {
+            // 🛑 Referência: Apenas o Card da Rádio (.radio-container) 🛑
+        const radioCard = document.querySelector('.radio-container');
+        const chatCard = document.querySelector('.chat-container');
+
+        if (radioCard && chatCard) {
+            // 1. Define a altura total do Card do Chat (Igual ao Card da Rádio)
+            const radioHeight = radioCard.getBoundingClientRect().height;
+
+            chatCard.style.height = `${radioHeight - 1}px`; // Sincroniza a altura externa com o valor decimal
+
+            // --- Variáveis para Cálculo Interno ---
+            const chatMessagesUl = document.getElementById('chat-messages');
+            const chatHeader = chatCard.querySelector('h3');
+            const chatForm = document.getElementById('chat-form');
+
+            // Função auxiliar para pegar a altura com margens (externa)
+            // **NOTA:** Esta função AINDA DEVE USAR getBoundingClientRect().height
+            const getTotalHeight = (element) => {
+                if (!element) return 0;
+                const rect = element.getBoundingClientRect();
+                const style = window.getComputedStyle(element);
+
+                // Altura decimal real. Adiciona as margens externas.
+                const margin = parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+                return rect.height + margin;
+            };
+
+            // 2. Calcula a altura total de todos os elementos FIXOS DENTRO do Chat
+            const headerTotalHeight = getTotalHeight(chatHeader);
+            const formTotalHeight = getTotalHeight(chatForm);
+
+            // 3. Subtrai o padding interno do chatCard (o container principal)
+            const chatCardStyle = window.getComputedStyle(chatCard);
+            const chatPaddingVertical = parseFloat(chatCardStyle.paddingTop) + parseFloat(chatCardStyle.paddingBottom);
+
+            // 4. Altura Disponível para a Lista de Mensagens (UL)
+            const availableHeightForMessages = radioHeight -
+                                                chatPaddingVertical -
+                                                headerTotalHeight -
+                                                formTotalHeight;
+
+            // 5. Aplica a altura calculada (garante que a rolagem funcione)
+            if (availableHeightForMessages > 50) {
+                // Aplica a altura interna com o valor decimal
+                chatMessagesUl.style.height = `${availableHeightForMessages}px`;
+                chatMessagesUl.style.flexGrow = '0';
+            } else {
+                 chatMessagesUl.style.flexGrow = '1';
+                 chatMessagesUl.style.height = 'auto';
+            }
+        }
     }
 
 </script>

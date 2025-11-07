@@ -49,7 +49,8 @@ public class RadioStreamService {
                 "ZezeeLucianoVEVO",
                 "Panda Cantor",
                 "Humberto e Ronaldo",
-                "Cê tá doido Festival"
+                "Cê tá doido Festival",
+                "Zezé Di Camargo & Luciano - Topic"
         };
 
         ALLOWED_AUTHORS = Arrays.stream(authorList)
