@@ -334,6 +334,14 @@ public class RadioStreamService {
             return ResponseEntity.badRequest().body("Erro: Não foi possível extrair a ID válida do vídeo ou URL fornecida.");
         }
 
+        boolean isDuplicate = youtubePlaylist.stream()
+                .anyMatch(info -> videoId.equals(info.getVideoId()));
+
+        if (isDuplicate) {
+            System.out.println("Tentativa de adicionar música duplicada: " + videoId);
+            return ResponseEntity.badRequest().body("Erro: Esta música já está na fila da playlist.");
+        }
+
         VideoDetails details = getDetailsFromYoutube(videoId);
         VideoInfo newVideo = new VideoInfo(videoId, details.title, details.statusMessage);
 

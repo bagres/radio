@@ -5,6 +5,7 @@ public class ChatMessage {
     private String sender;
     private String content;
     private String timestamp;
+    private String type;
 
     public ChatMessage() {
     }
@@ -38,4 +39,8 @@ public class ChatMessage {
     public void setTimestamp(String timestamp) {
         this.timestamp = timestamp;
     }
+
+    public void setType(String type) {this.type = type;}
+
+    public String getType() {return type;}
 }
