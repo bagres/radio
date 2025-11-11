@@ -39,21 +39,21 @@ public class RadioStreamService {
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final CopyOnWriteArrayList<SseEmitter> metadataListeners = new CopyOnWriteArrayList<>();
     private static final Set<String> ALLOWED_AUTHORS;
-    static {
-        String[] authorList = {
-                "Ícaro e Gilmar",
-                "Henrique e Juliano",
-                "Zé Neto e Cristiano",
-                "Bruno & Marrone",
-                "EduardoCostaVEVO",
-                "ZezeeLucianoVEVO",
-                "Panda Cantor",
-                "Humberto e Ronaldo",
-                "Cê tá doido Festival",
-                "Zezé Di Camargo & Luciano - Topic"
-        };
+    private static final String[] RAW_ALLOWED_AUTHORS = {
+            "Ícaro e Gilmar",
+            "Henrique e Juliano",
+            "Zé Neto e Cristiano",
+            "Bruno & Marrone",
+            "EduardoCostaVEVO",
+            "ZezeeLucianoVEVO",
+            "Panda Cantor",
+            "Humberto e Ronaldo",
+            "Cê tá doido Festival",
+            "Zezé Di Camargo & Luciano - Topic"
+    };
 
-        ALLOWED_AUTHORS = Arrays.stream(authorList)
+    static {
+        ALLOWED_AUTHORS = Arrays.stream(RAW_ALLOWED_AUTHORS)
                 .map(RadioStreamService::normalizeString)
                 .collect(Collectors.toSet());
     }
@@ -269,11 +269,26 @@ public class RadioStreamService {
         return normalized;
     }
 
+    private boolean checkTitleForAuthorMatch(String title) {
+        if (title == null) return false;
+
+        String normalizedTitle = normalizeString(title);
+
+        for (String rawAuthor : RAW_ALLOWED_AUTHORS) {
+            String normalizedAuthor = normalizeString(rawAuthor);
+            if (normalizedTitle.contains(normalizedAuthor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private VideoDetails getDetailsFromYoutube(String videoId) {
         String oembedUrl = "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=" + videoId + "&format=json";
         String title = "Título não encontrado";
         String authorName = null;
         String statusMessage = "Erro ao buscar detalhes.";
+        boolean isPure = false;
 
         try {
             Map result = restTemplate.getForObject(oembedUrl, Map.class);
@@ -283,16 +298,26 @@ public class RadioStreamService {
             if (authorName != null && !authorName.isEmpty()) {
                 String normalizedAuthor = normalizeString(authorName);
                 if (ALLOWED_AUTHORS.contains(normalizedAuthor)) {
-                    statusMessage = "Aí sim, essa é a pura";
-                } else {
-                    statusMessage = "Essa música é de bagre.";
+                    isPure = true;
                 }
-            } else {
-                statusMessage = "Autor não encontrado para verificação.";
             }
+
+            if (!isPure && title != null && !title.isEmpty()) {
+                if (checkTitleForAuthorMatch(title)) {
+                    isPure = true;
+                }
+            }
+
+            if (isPure) {
+                statusMessage = "Aí sim, essa é a pura";
+            } else {
+                statusMessage = "Essa música é de bagre.";
+            }
+
         } catch (Exception e) {
             System.err.println("Erro ao buscar detalhes do vídeo " + videoId + ": " + e.getMessage());
             title = "Falha ao carregar título";
+            statusMessage = "Autor não encontrado para verificação.";
         }
 
         return new VideoDetails(title, authorName, statusMessage);
