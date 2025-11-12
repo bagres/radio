@@ -1,4 +1,4 @@
-name: CI - Build e Docker
+name: CI - Build, Teste e Push para GHCR
 
 on:
   push:
@@ -20,8 +20,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Compilar e rodar testes
-        run: mvn clean verify
+      - name: Compilar e rodar testes (CI - Qualidade)
+        run: mvn clean verify -DskipTests=false
 
       - name: Build da imagem Docker
         run: docker build -t radio .
@@ -31,7 +31,25 @@ jobs:
           docker run -d -p 8080:8080 --name radio radio
           sleep 10
           docker ps
-          docker logs radio
+          docker logs radio || true
+          docker stop radio || true
+          docker rm radio || true
 
-      - name: Parar container
-        run: docker stop radio
+      - name: Logar no GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Criar e enviar imagem Docker para o GHCR
+        run: |
+          IMAGE_REPO=ghcr.io/${{ github.repository }}
+
+          # Tags (use apenas uma barra!)
+          docker tag radio:latest $IMAGE_REPO:latest
+          docker tag radio:latest $IMAGE_REPO:${{ github.sha }}
+
+          # Push
+          docker push $IMAGE_REPO:latest
+          docker push $IMAGE_REPO:${{ github.sha }}
