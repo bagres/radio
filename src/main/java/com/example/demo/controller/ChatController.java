@@ -28,11 +28,11 @@ public class ChatController {
             return null;
         }
 
-        safeContent = Jsoup.clean(messageContent, CHAT_SAFELIST);
-
-        if (safeContent.trim().isEmpty()) {
-            return null;
-        }
+//        safeContent = Jsoup.clean(messageContent, CHAT_SAFELIST);
+//
+//        if (safeContent.trim().isEmpty()) {
+//            return null;
+//        }
 
         if (messageContent.length() > MAX_MESSAGE_LENGTH) {
             return createErrorMessage(chatMessage.getSender(),
@@ -40,7 +40,7 @@ public class ChatController {
                     "ERROR");
         }
 
-        chatMessage.setContent(safeContent);
+        chatMessage.setContent(messageContent);
         chatMessage.setTimestamp(LocalTime.now().format(FORMATTER));
 
         if (chatMessage.getType() == null || chatMessage.getType().equals("ERROR")) {
