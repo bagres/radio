@@ -2,6 +2,10 @@ FROM eclipse-temurin:17-jdk-alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache python3 py3-pip
+
+RUN pip3 install --no-cache-dir yt-dlp
+
 COPY target/*.jar app.jar
 
 EXPOSE 8080

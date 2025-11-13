@@ -1,8 +1,6 @@
 package com.example.demo.controller;
 
 import com.example.demo.info.ChatMessage;
-import org.jsoup.Jsoup;
-import org.jsoup.safety.Safelist;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
@@ -15,14 +13,12 @@ public class ChatController {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     private static final int MAX_MESSAGE_LENGTH = 250;
-    private static final Safelist CHAT_SAFELIST = Safelist.none();
 
     @MessageMapping("/sendMessage")
     @SendTo("/topic/public")
     public ChatMessage sendMessage(ChatMessage chatMessage) {
 
         String messageContent = chatMessage.getContent();
-        String safeContent;
 
         if (messageContent == null || messageContent.trim().isEmpty()) {
             return null;

@@ -1,7 +1,12 @@
 package com.example.demo.service;
 
 import com.example.demo.info.VideoInfo;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,7 +15,9 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.PostConstruct;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.Normalizer;
@@ -30,6 +37,8 @@ public class RadioStreamService {
 
     public record VideoDetails(String title, String authorName, String statusMessage) {
     }
+
+    public record SearchResult(String id, String title) {}
 
     private volatile String currentVideoId = null;
     private volatile long currentVideoStartTimeMs = 0;
@@ -389,6 +398,51 @@ public class RadioStreamService {
         });
 
         return ResponseEntity.ok("Música adicionada à playlist (" + details.statusMessage + "): " + details.title);
+    }
+
+    public SearchResult searchYoutubeVideo(String query) {
+        ObjectMapper mapper = new ObjectMapper();
+
+        String command = String.format("yt-dlp --dump-json --flat-playlist \"ytsearch1:%s\"", query);
+        System.out.println("Executando busca: " + command);
+
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+
+            String jsonOutput = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))
+                    .lines().collect(Collectors.joining("\n"));
+
+            new BufferedReader(
+                    new InputStreamReader(process.getErrorStream()))
+                    .lines().forEach(System.err::println);
+
+            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
+
+            if (!finished || process.exitValue() != 0) {
+                System.err.println("Erro ou Timeout ao executar yt-dlp.");
+                return null;
+            }
+
+            if (jsonOutput.trim().isEmpty()) {
+                return null;
+            }
+
+            String firstLine = jsonOutput.split("\n")[0];
+
+            Map<String, Object> result = mapper.readValue(firstLine, new TypeReference<Map<String, Object>>() {});
+
+            String videoId = (String) result.get("id");
+            String title = (String) result.get("title");
+
+            if (videoId != null && title != null) {
+                return new SearchResult(videoId, title);
+            }
+
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Exceção ao executar yt-dlp: " + e.getMessage());
+        }
+        return null;
     }
 
     public Queue<VideoInfo> getPlaylist() {

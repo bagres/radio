@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.info.VideoInfo;
 import com.example.demo.service.RadioStreamService;
+import com.example.demo.service.RadioStreamService.SearchResult;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +27,20 @@ public class RadioStreamController {
     @PostMapping("/radio/add-youtube")
     public ResponseEntity<String> addYoutubeAudio(@RequestParam("videoId") String urlOrVideoId) {
         return service.addMusicToPlaylist(urlOrVideoId);
+    }
+
+    @GetMapping("/radio/search")
+    public ResponseEntity<SearchResult> searchYoutube(@RequestParam("query") String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        SearchResult result = service.searchYoutubeVideo(query);
+
+        if (result != null) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping(value = "/radio/metadata", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
