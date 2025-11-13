@@ -28,11 +28,6 @@ public class ChatController {
             return null;
         }
 
-//        safeContent = Jsoup.clean(messageContent, CHAT_SAFELIST);
-//
-//        if (safeContent.trim().isEmpty()) {
-//            return null;
-//        }
 
         if (messageContent.length() > MAX_MESSAGE_LENGTH) {
             return createErrorMessage(chatMessage.getSender(),
