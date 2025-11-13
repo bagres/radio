@@ -403,7 +403,17 @@ public class RadioStreamService {
     public SearchResult searchYoutubeVideo(String query) {
         ObjectMapper mapper = new ObjectMapper();
 
-        String command = String.format("yt-dlp --dump-json --flat-playlist \"ytsearch1:%s\"", query);
+        String fullSearchArgument = "ytsearch1:" + query;
+
+        String[] command = {
+                "python3",
+                "-m",
+                "yt_dlp",
+                "--dump-json",
+                "--flat-playlist",
+                fullSearchArgument
+        };
+
         System.out.println("Executando busca: " + command);
 
         try {
