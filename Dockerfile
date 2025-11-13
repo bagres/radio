@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN apk add --no-cache python3 py3-pip
 
-RUN pip3 install --no-cache-dir yt-dlp
+RUN pip3 install --no-cache-dir yt-dlp --break-system-packages
 
 COPY target/*.jar app.jar
 
