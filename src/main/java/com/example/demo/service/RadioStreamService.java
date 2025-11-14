@@ -421,40 +421,34 @@ public class RadioStreamService {
         try {
             Process process = Runtime.getRuntime().exec(command);
 
-            String jsonOutput = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))
-                    .lines().collect(Collectors.joining("\n"));
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String videoId = reader.readLine();
+            String title   = reader.readLine();
+
+            process.waitFor(5, TimeUnit.SECONDS);
 
             new BufferedReader(
                     new InputStreamReader(process.getErrorStream()))
                     .lines().forEach(System.err::println);
 
-            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
-
-            if (!finished || process.exitValue() != 0) {
-                System.err.println("Erro ou Timeout ao executar yt-dlp.");
+            if (videoId == null || title == null) {
+                System.err.println("yt-dlp retornou dados incompletos.");
                 return null;
             }
 
-            if (jsonOutput.trim().isEmpty()) {
-                return null;
-            }
+            videoId = videoId.trim();
+            title = title.trim();
 
-            String firstLine = jsonOutput.split("\n")[0];
+            System.out.println("Resultado da busca → ID: " + videoId + "  Título: " + title);
 
-            Map<String, Object> result = mapper.readValue(firstLine, new TypeReference<Map<String, Object>>() {});
-
-            String videoId = (String) result.get("id");
-            String title = (String) result.get("title");
-
-            if (videoId != null && title != null) {
-                return new SearchResult(videoId, title);
-            }
+            return new SearchResult(videoId, title);
 
         } catch (IOException | InterruptedException e) {
             System.err.println("Exceção ao executar yt-dlp: " + e.getMessage());
+            return null;
         }
-        return null;
     }
 
     public Queue<VideoInfo> getPlaylist() {
