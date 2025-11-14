@@ -409,10 +409,10 @@ public class RadioStreamService {
                 "python3",
                 "-m",
                 "yt_dlp",
+                "--encoding", "utf-8",
                 "--print", "id",
                 "--print", "title",
                 "--skip-download",
-                "--quiet",
                 "ytsearch1:" + query
         };
 
