@@ -29,6 +29,21 @@ public class RadioStreamController {
         return service.addMusicToPlaylist(urlOrVideoId);
     }
 
+    @PostMapping("/radio/add")
+    public ResponseEntity<String> addByUrlOrSearch(@RequestParam("input") String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Input vazio.");
+        }
+
+        String videoId = service.resolveQueryToVideoId(input);
+
+        if (videoId == null) {
+            return ResponseEntity.badRequest().body("Erro: Não foi possível encontrar um vídeo para o input fornecido.");
+        }
+
+        return service.addMusicToPlaylist(videoId);
+    }
+
     @PostMapping("/radio/search-add")
     public ResponseEntity<String> searchAndAdd(@RequestParam("query") String query) {
 

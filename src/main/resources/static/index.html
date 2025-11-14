@@ -592,20 +592,14 @@
                 <button id="skipButton" onclick="skipSong()">⏭ Pular Música</button>
             </div>
 
-            <form id="youtube-form" onsubmit="event.preventDefault(); addMusic(document.getElementById('videoId').value);">
-                <label for="videoId">YouTube URL ou Video ID:</label>
-                <input id="videoId" name="videoId" type="text" placeholder="ex: https://youtu.be/abc123" required />
-                <button type="submit">Adicionar por URL</button>
-            </form>
-            <hr style="width: 80%; border: 1px dashed #555; margin: 20px auto;">
-
-            <form id="search-form" onsubmit="event.preventDefault(); searchAndAddMusic();">
-                <label for="searchQuery">Buscar por Nome:</label>
-                <input id="searchQuery" name="searchQuery" type="text" placeholder="ex: Icaro e Gilmar" required />
-                <button type="submit">Buscar & Adicionar</button>
+            <form id="add-form" onsubmit="event.preventDefault(); addOrSearch();">
+                <label for="addInput">YouTube URL, Video ID ou Buscar por Nome:</label>
+                <input id="addInput" name="addInput" type="text"
+                       placeholder="ex: https://youtu.be/abc123  ou  Icaro e Gilmar" required />
+                <button type="submit">Adicionar</button>
             </form>
 
-            <div id="search-result-message" style="margin-top: 10px; font-size: 0.9em; color: #ffeb3b;"></div>
+            <div id="add-result-message" style="margin-top: 10px; font-size: 0.9em; color: #ffeb3b;"></div>
         </div>
 
         <div class="playlist-container">
@@ -797,45 +791,37 @@
     }
 }
 
-    async function addMusic(urlMusic) {
-        const videoId = extractYouTubeId(urlMusic);
-        fetch('/radio/add-youtube', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'videoId=' + encodeURIComponent(videoId)
-        });
-        document.getElementById('videoId').value = '';
-        renderPlaylist();
-    }
+    async function addOrSearch() {
+        const inputEl = document.getElementById('addInput');
+        const q = inputEl.value.trim();
+        const resultMessage = document.getElementById('add-result-message');
 
-    async function searchAndAddMusic() {
-        const query = document.getElementById('searchQuery').value.trim();
-        const resultMessageElement = document.getElementById('search-result-message');
+        if (!q) return;
 
-        if (!query) return;
-
-        resultMessageElement.innerText = `Buscando por "${query}"...`;
+        resultMessage.innerText = `Processando...`;
 
         try {
-            const addResponse = await fetch('/radio/search-add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'query=' + encodeURIComponent(query)
+            const resp = await fetch('/radio/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'input=' + encodeURIComponent(q)
             });
 
-            const addMessage = await addResponse.text();
-            document.getElementById('radio-status-message').innerText = addMessage;
+            const text = await resp.text();
 
-            if (addResponse.ok) {
-                resultMessageElement.innerText = `Música adicionada!`;
-                document.getElementById('searchQuery').value = '';
+            if (resp.ok) {
+                resultMessage.innerText = text || 'Música adicionada!';
+                inputEl.value = '';
             } else {
-                resultMessageElement.innerText = `Erro: ${message}`;
+                resultMessage.innerText = `Erro: ${text || 'Não foi possível adicionar.'}`;
             }
+
+            // atualiza playlist e status
             renderPlaylist();
-        } catch (error) {
-            console.error("Erro na busca com yt-dlp:", error);
-            resultMessageElement.innerText = 'Erro de rede ou falha na execução do yt-dlp.';
+            document.getElementById('radio-status-message').innerText = text || '';
+        } catch (err) {
+            console.error("Erro na requisição:", err);
+            resultMessage.innerText = 'Erro de rede ou servidor.';
         }
     }
 
