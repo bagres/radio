@@ -408,6 +408,7 @@ public class RadioStreamService {
                 "-m",
                 "yt_dlp",
                 "--get-id",
+                "--flat-playlist",
                 fullSearchArgument
         };
 
