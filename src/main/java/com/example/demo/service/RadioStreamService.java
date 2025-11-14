@@ -422,7 +422,7 @@ public class RadioStreamService {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String firstLine = reader.readLine();
 
-            boolean finished = process.waitFor(6, TimeUnit.SECONDS);
+            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
 
             if (!finished || process.exitValue() != 0) {
                 System.err.println("Erro ou Timeout ao executar yt-dlp.");
