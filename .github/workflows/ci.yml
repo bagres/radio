@@ -58,6 +58,11 @@ jobs:
           docker push $IMAGE:latest
           docker push $IMAGE:${{ github.sha }}
 
+      - name: Debug Secrets (não imprime o valor, só verifica se existe)
+        run: |
+          echo "PROD hook vazio?  $([[ -z '${{ secrets.RENDER_PROD_DEPLOY_HOOK }}' ]] && echo SIM || echo NÃO)"
+          echo "DEV hook vazio?   $([[ -z '${{ secrets.RENDER_DEV_DEPLOY_HOOK }}' ]] && echo SIM || echo NÃO)"
+
       - name: Notify Render
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
@@ -65,4 +70,3 @@ jobs:
           else
             curl -X POST "${{ secrets.RENDER_DEV_DEPLOY_HOOK }}"
           fi
-
