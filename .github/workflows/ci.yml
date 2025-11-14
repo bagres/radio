@@ -1,58 +1,72 @@
-name: CI - Build, Teste e Push para GHCR
+name: CI/CD Multi-Ambiente
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ develop, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     permissions:
-      contents: read 
+      contents: read
       packages: write
 
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Compilar e rodar testes (CI - Qualidade)
+      - name: Build & Test
         run: mvn clean verify -DskipTests=false
 
-      - name: Build da imagem Docker
-        run: docker build -t radio .
-
-      - name: Testar execução local do container
+      - name: Docker Build
         run: |
-          docker run -d -p 8080:8080 --name radio radio
-          sleep 10
-          docker ps
-          docker logs radio || true
-          docker stop radio || true
-          docker rm radio || true
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            IMAGE_NAME="radio-prod"
+          else
+            IMAGE_NAME="radio-dev"
+          fi
 
-      - name: Logar no GitHub Container Registry (GHCR)
+          docker build -t $IMAGE_NAME .
+
+      - name: Login GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Criar e enviar imagem Docker para o GHCR
+      - name: Push to GHCR (DEV/PROD)
         run: |
-          IMAGE_REPO=ghcr.io/${{ github.repository }}
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            IMAGE="ghcr.io/${{ github.repository }}-prod"
+            LOCAL_IMAGE="radio-prod"
+          else
+            IMAGE="ghcr.io/${{ github.repository }}-dev"
+            LOCAL_IMAGE="radio-dev"
+          fi
 
-          # Tags (use apenas uma barra!)
-          docker tag radio:latest $IMAGE_REPO:latest
-          docker tag radio:latest $IMAGE_REPO:${{ github.sha }}
+          echo "Publicando imagem: $IMAGE"
 
-          # Push
-          docker push $IMAGE_REPO:latest
-          docker push $IMAGE_REPO:${{ github.sha }}
+          docker tag $LOCAL_IMAGE $IMAGE:latest
+          docker tag $LOCAL_IMAGE $IMAGE:${{ github.sha }}
+
+          docker push $IMAGE:latest
+          docker push $IMAGE:${{ github.sha }}
+
+      - name: Debug Secrets (não imprime o valor, só verifica se existe)
+        run: |
+          echo "PROD hook vazio?  $([[ -z '${{ secrets.RENDER_PROD_DEPLOY_HOOK }}' ]] && echo SIM || echo NÃO)"
+          echo "DEV hook vazio?   $([[ -z '${{ secrets.RENDER_DEV_DEPLOY_HOOK }}' ]] && echo SIM || echo NÃO)"
+
+      - name: Notify Render
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            curl -X POST "${{ secrets.RENDER_PROD_DEPLOY_HOOK }}"
+          else
+            curl -X POST "${{ secrets.RENDER_DEV_DEPLOY_HOOK }}"
+          fi
