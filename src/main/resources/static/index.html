@@ -817,7 +817,7 @@
         resultMessageElement.innerText = `Buscando por "${query}"...`;
 
         try {
-            const addResponse = await fetch('/radio/search-add', {
+            const addResponse =  fetch('/radio/search-add', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: 'query=' + encodeURIComponent(query)
@@ -827,7 +827,7 @@
             document.getElementById('radio-status-message').innerText = addMessage;
 
             if (addResponse.ok) {
-                resultMessageElement.innerText = `Música adicionada!`;
+                resultMessageElement.innerText = `Música adicionada.`;
                 document.getElementById('searchQuery').value = '';
             } else {
                 resultMessageElement.innerText = `Erro: ${message}`;
