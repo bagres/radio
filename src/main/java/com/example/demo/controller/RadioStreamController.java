@@ -29,18 +29,20 @@ public class RadioStreamController {
         return service.addMusicToPlaylist(urlOrVideoId);
     }
 
-    @GetMapping("/radio/search")
-    public ResponseEntity<SearchResult> searchYoutube(@RequestParam("query") String query) {
-        if (query == null || query.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
-        }
-        SearchResult result = service.searchYoutubeVideo(query);
+    @PostMapping("/radio/search-add")
+    public ResponseEntity<String> searchAndAdd(@RequestParam("query") String query) {
 
-        if (result != null) {
-            return ResponseEntity.ok(result);
-        } else {
-            return ResponseEntity.notFound().build();
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Query vazia.");
         }
+
+        RadioStreamService.SearchResult result = service.searchYoutubeVideo(query);
+
+        if (result == null) {
+            return ResponseEntity.badRequest().body("Erro: Nenhum vídeo encontrado.");
+        }
+
+        return service.addMusicToPlaylist(result.id());
     }
 
     @GetMapping(value = "/radio/metadata", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

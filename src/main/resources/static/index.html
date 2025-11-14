@@ -817,36 +817,22 @@
         resultMessageElement.innerText = `Buscando por "${query}"...`;
 
         try {
-            // 1. CHAMA O ENDPOINT DE BUSCA (yt-dlp)
-            const response = await fetch(`/radio/search?query=${encodeURIComponent(query)}`);
-
-            if (response.ok) {
-                const searchResult = await response.json();
-
-                if (searchResult && searchResult.id) {
-                    resultMessageElement.innerText = `Vídeo encontrado: "${searchResult.title}". Adicionando...`;
-
-                    // 2. CHAMA O ENDPOINT DE ADIÇÃO EXISTENTE com o ID encontrado
-                    const addResponse = await fetch('/radio/add-youtube', {
+            const addResponse = await fetch('/radio/search-add', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'videoId=' + encodeURIComponent(searchResult.id) // Envia o ID limpo
-                    });
+                        body: 'query=' + encodeURIComponent(query)
+            });
 
-                    const addMessage = await addResponse.text();
-                    document.getElementById('radio-status-message').innerText = addMessage;
+            const addMessage = await addResponse.text();
+            document.getElementById('radio-status-message').innerText = addMessage;
 
-                    if (addResponse.ok) {
-                        document.getElementById('searchQuery').value = '';
-                    }
-
-                    renderPlaylist();
-                } else {
-                    resultMessageElement.innerText = `Nenhum vídeo encontrado para "${query}".`;
-                }
+            if (addResponse.ok) {
+                resultMessageElement.innerText = `Música adicionada: ${addMessage}`;
+                document.getElementById('searchQuery').value = '';
             } else {
-                resultMessageElement.innerText = `Erro na busca: ${response.statusText}.`;
+                resultMessageElement.innerText = `Erro: ${message}`;
             }
+            renderPlaylist();
         } catch (error) {
             console.error("Erro na busca com yt-dlp:", error);
             resultMessageElement.innerText = 'Erro de rede ou falha na execução do yt-dlp.';
