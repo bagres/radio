@@ -409,7 +409,7 @@ public class RadioStreamService {
                 "python3",
                 "-m",
                 "yt_dlp",
-                "--dump-json",
+                "--dump-single-json",
                 "--flat-playlist",
                 fullSearchArgument
         };
@@ -419,13 +419,8 @@ public class RadioStreamService {
         try {
             Process process = Runtime.getRuntime().exec(command);
 
-            String jsonOutput = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))
-                    .lines().collect(Collectors.joining("\n"));
-
-            new BufferedReader(
-                    new InputStreamReader(process.getErrorStream()))
-                    .lines().forEach(System.err::println);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String firstLine = reader.readLine();
 
             boolean finished = process.waitFor(6, TimeUnit.SECONDS);
 
@@ -434,11 +429,7 @@ public class RadioStreamService {
                 return null;
             }
 
-            if (jsonOutput.trim().isEmpty()) {
-                return null;
-            }
-
-            String firstLine = jsonOutput.split("\n")[0];
+            if (firstLine == null || firstLine.trim().isEmpty()) return null;
 
             Map<String, Object> result = mapper.readValue(firstLine, new TypeReference<Map<String, Object>>() {});
 
