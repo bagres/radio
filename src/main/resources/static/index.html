@@ -791,71 +791,69 @@
     }
 }
 
+    let addResultTimeout = null;
+
     async function addOrSearch() {
-    const inputEl = document.getElementById('addInput');
-    const q = inputEl.value.trim();
-    const resultMessage = document.getElementById('add-result-message');
-    const statusMessageEl = document.getElementById('radio-status-message');
+        const inputEl = document.getElementById('addInput');
+        const q = inputEl.value.trim();
+        const resultMessage = document.getElementById('add-result-message');
+        const statusMessageEl = document.getElementById('radio-status-message');
 
-    if (!q) return;
+        if (!q) return;
 
-    // limpa timeout anterior (se existir) e garante opacidade inicial
-    if (addResultTimeout) {
-        clearTimeout(addResultTimeout);
-        addResultTimeout = null;
-    }
-    resultMessage.style.transition = 'opacity 0.25s';
-    resultMessage.style.opacity = '1';
-
-    resultMessage.innerText = `Processando...`;
-
-    try {
-        const resp = await fetch('/radio/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'input=' + encodeURIComponent(q)
-        });
-
-        const text = await resp.text();
-
-        if (resp.ok) {
-            // mostra a mensagem de sucesso
-            resultMessage.style.opacity = '1';
-            resultMessage.innerText = text || 'Música adicionada!';
-            inputEl.value = '';
-
-            // também atualiza a barra de status
-            statusMessageEl.innerText = text || '';
-
-            // faz sumir após 2s com um fade curto
-            addResultTimeout = setTimeout(() => {
-                resultMessage.style.opacity = '0';
-                // remove o texto depois do fade (espera 250ms)
-                setTimeout(() => {
-                    resultMessage.innerText = '';
-                }, 250);
-
-                // opcional: limpa também a mensagem de status principal depois de 2s
-                statusMessageEl.innerText = '';
-                addResultTimeout = null;
-            }, 2000);
-
-        } else {
-            // em caso de erro, mostra e NÃO some automaticamente
-            resultMessage.style.opacity = '1';
-            resultMessage.innerText = `Erro: ${text || 'Não foi possível adicionar.'}`;
-            // atualiza status também
-            statusMessageEl.innerText = text || '';
+        // Limpa timeout anterior para evitar conflitos
+        if (addResultTimeout) {
+            clearTimeout(addResultTimeout);
+            addResultTimeout = null;
         }
 
-        // atualiza playlist
-        renderPlaylist();
-    } catch (err) {
-        console.error("Erro na requisição:", err);
+        // Configura o fade e mostra a mensagem
+        resultMessage.style.transition = 'opacity 0.3s';
         resultMessage.style.opacity = '1';
-        resultMessage.innerText = 'Erro de rede ou servidor.';
+        resultMessage.innerText = "Processando...";
+
+        try {
+            const resp = await fetch('/radio/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'input=' + encodeURIComponent(q)
+            });
+
+            const text = await resp.text();
+
+            if (resp.ok) {
+                resultMessage.innerText = text || "Música adicionada!";
+                inputEl.value = '';
+                statusMessageEl.innerText = text || "";
+
+                // ⏳ Fazer a mensagem sumir após 3 segundos
+                addResultTimeout = setTimeout(() => {
+                    resultMessage.style.opacity = "0"; // inicia fade
+
+                    // Remove texto depois do fade terminar (300 ms)
+                    setTimeout(() => {
+                        resultMessage.innerText = "";
+                    }, 300);
+
+                    // limpa timeout
+                    addResultTimeout = null;
+                }, 3000);
+
+            } else {
+                // Para erros, não some automaticamente
+                resultMessage.style.opacity = "1";
+                resultMessage.innerText = `Erro: ${text || "Não foi possível adicionar."}`;
+                statusMessageEl.innerText = text || "";
+            }
+
+            renderPlaylist();
+
+        } catch (err) {
+            console.error("Erro:", err);
+            resultMessage.innerText = "Erro de rede ou servidor.";
+            resultMessage.style.opacity = "1";
+        }
     }
-}
 
     async function renderPlaylist() {
     const listElement = document.getElementById('playlist-ul');
