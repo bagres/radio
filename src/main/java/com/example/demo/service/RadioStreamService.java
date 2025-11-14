@@ -409,11 +409,9 @@ public class RadioStreamService {
                 "python3",
                 "-m",
                 "yt_dlp",
-                "--encoding", "utf-8",
-                "--print", "id",
-                "--print", "title",
-                "--skip-download",
-                "ytsearch1:" + query
+                "--dump-json",
+                "--flat-playlist",
+                fullSearchArgument
         };
 
         System.out.println("Executando busca: " + command);
@@ -421,34 +419,40 @@ public class RadioStreamService {
         try {
             Process process = Runtime.getRuntime().exec(command);
 
-            BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            String videoId = reader.readLine();
-            String title   = reader.readLine();
-
-            process.waitFor(5, TimeUnit.SECONDS);
+            String jsonOutput = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))
+                    .lines().collect(Collectors.joining("\n"));
 
             new BufferedReader(
                     new InputStreamReader(process.getErrorStream()))
                     .lines().forEach(System.err::println);
 
-            if (videoId == null || title == null) {
-                System.err.println("yt-dlp retornou dados incompletos.");
+            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
+
+            if (!finished || process.exitValue() != 0) {
+                System.err.println("Erro ou Timeout ao executar yt-dlp.");
                 return null;
             }
 
-            videoId = videoId.trim();
-            title = title.trim();
+            if (jsonOutput.trim().isEmpty()) {
+                return null;
+            }
 
-            System.out.println("Resultado da busca → ID: " + videoId + "  Título: " + title);
+            String firstLine = jsonOutput.split("\n")[0];
 
-            return new SearchResult(videoId, title);
+            Map<String, Object> result = mapper.readValue(firstLine, new TypeReference<Map<String, Object>>() {});
+
+            String videoId = (String) result.get("id");
+            String title = (String) result.get("title");
+
+            if (videoId != null && title != null) {
+                return new SearchResult(videoId, title);
+            }
 
         } catch (IOException | InterruptedException e) {
             System.err.println("Exceção ao executar yt-dlp: " + e.getMessage());
-            return null;
         }
+        return null;
     }
 
     public Queue<VideoInfo> getPlaylist() {
