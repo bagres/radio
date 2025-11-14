@@ -408,6 +408,7 @@ public class RadioStreamService {
         String[] command = {
                 "python3",
                 "-m",
+                "yt_dlp",
                 "--get-id",
                 fullSearchArgument
         };
