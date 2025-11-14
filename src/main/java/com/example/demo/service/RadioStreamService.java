@@ -409,9 +409,11 @@ public class RadioStreamService {
                 "python3",
                 "-m",
                 "yt_dlp",
-                "--dump-json",
-                "--flat-playlist",
-                fullSearchArgument
+                "--print", "id",
+                "--print", "title",
+                "--skip-download",
+                "--quiet",
+                "ytsearch1:" + query
         };
 
         System.out.println("Executando busca: " + command);
