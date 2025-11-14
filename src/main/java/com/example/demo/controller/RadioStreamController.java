@@ -36,13 +36,13 @@ public class RadioStreamController {
             return ResponseEntity.badRequest().body("Erro: Query vazia.");
         }
 
-        RadioStreamService.SearchResult result = service.searchYoutubeVideo(query);
+        String videoId = service.searchYoutubeVideoId(query);
 
-        if (result == null) {
+        if (videoId == null) {
             return ResponseEntity.badRequest().body("Erro: Nenhum vídeo encontrado.");
         }
 
-        return service.addMusicToPlaylist(result.id());
+        return service.addMusicToPlaylist(videoId);
     }
 
     @GetMapping(value = "/radio/metadata", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

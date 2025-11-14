@@ -400,9 +400,7 @@ public class RadioStreamService {
         return ResponseEntity.ok("Música adicionada à playlist (" + details.statusMessage + "): " + details.title);
     }
 
-    public SearchResult searchYoutubeVideo(String query) {
-        ObjectMapper mapper = new ObjectMapper();
-
+    public String searchYoutubeVideoId(String query) {
         String fullSearchArgument = "ytsearch1:" + query;
 
         String[] command = {
@@ -413,27 +411,19 @@ public class RadioStreamService {
                 fullSearchArgument
         };
 
-        System.out.println("Executando busca: " + command);
-
         try {
             Process process = Runtime.getRuntime().exec(command);
-
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String videoId = reader.readLine();
-
             boolean finished = process.waitFor(10, TimeUnit.SECONDS);
 
             if (!finished || process.exitValue() != 0 || videoId == null || videoId.trim().isEmpty()) {
-                System.err.println("Erro ou Timeout ao executar yt-dlp.");
                 return null;
             }
-
-            return new SearchResult(videoId.trim(), null);
-
+            return videoId.trim();
         } catch (IOException | InterruptedException e) {
-            System.err.println("Exceção ao executar yt-dlp: " + e.getMessage());
+            return null;
         }
-        return null;
     }
 
     public Queue<VideoInfo> getPlaylist() {
