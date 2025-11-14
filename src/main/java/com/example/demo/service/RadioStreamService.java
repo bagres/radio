@@ -409,6 +409,7 @@ public class RadioStreamService {
                 "yt_dlp",
                 "--get-id",
                 "--flat-playlist",
+                "--extractor-args", "youtube:player_client=default",
                 fullSearchArgument
         };
 
