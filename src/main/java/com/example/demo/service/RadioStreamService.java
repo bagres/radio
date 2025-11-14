@@ -400,32 +400,59 @@ public class RadioStreamService {
         return ResponseEntity.ok("Música adicionada à playlist (" + details.statusMessage + "): " + details.title);
     }
 
-    public String searchYoutubeVideoId(String query) {
+    public SearchResult searchYoutubeVideo(String query) {
+        ObjectMapper mapper = new ObjectMapper();
+
         String fullSearchArgument = "ytsearch1:" + query;
 
         String[] command = {
                 "python3",
                 "-m",
                 "yt_dlp",
-                "--get-id",
+                "--dump-json",
                 "--flat-playlist",
-                "--extractor-args", "youtube:player_client=default",
                 fullSearchArgument
         };
 
+        System.out.println("Executando busca: " + command);
+
         try {
             Process process = Runtime.getRuntime().exec(command);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String videoId = reader.readLine();
+
+            String jsonOutput = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))
+                    .lines().collect(Collectors.joining("\n"));
+
+            new BufferedReader(
+                    new InputStreamReader(process.getErrorStream()))
+                    .lines().forEach(System.err::println);
+
             boolean finished = process.waitFor(10, TimeUnit.SECONDS);
 
-            if (!finished || process.exitValue() != 0 || videoId == null || videoId.trim().isEmpty()) {
+            if (!finished || process.exitValue() != 0) {
+                System.err.println("Erro ou Timeout ao executar yt-dlp.");
                 return null;
             }
-            return videoId.trim();
+
+            if (jsonOutput.trim().isEmpty()) {
+                return null;
+            }
+
+            String firstLine = jsonOutput.split("\n")[0];
+
+            Map<String, Object> result = mapper.readValue(firstLine, new TypeReference<Map<String, Object>>() {});
+
+            String videoId = (String) result.get("id");
+            String title = (String) result.get("title");
+
+            if (videoId != null && title != null) {
+                return new SearchResult(videoId, title);
+            }
+
         } catch (IOException | InterruptedException e) {
-            return null;
+            System.err.println("Exceção ao executar yt-dlp: " + e.getMessage());
         }
+        return null;
     }
 
     public Queue<VideoInfo> getPlaylist() {
