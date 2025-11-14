@@ -408,9 +408,7 @@ public class RadioStreamService {
         String[] command = {
                 "python3",
                 "-m",
-                "yt_dlp",
-                "--dump-single-json",
-                "--flat-playlist",
+                "--get-id",
                 fullSearchArgument
         };
 
@@ -420,25 +418,16 @@ public class RadioStreamService {
             Process process = Runtime.getRuntime().exec(command);
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String firstLine = reader.readLine();
+            String videoId = reader.readLine();
 
             boolean finished = process.waitFor(10, TimeUnit.SECONDS);
 
-            if (!finished || process.exitValue() != 0) {
+            if (!finished || process.exitValue() != 0 || videoId == null || videoId.trim().isEmpty()) {
                 System.err.println("Erro ou Timeout ao executar yt-dlp.");
                 return null;
             }
 
-            if (firstLine == null || firstLine.trim().isEmpty()) return null;
-
-            Map<String, Object> result = mapper.readValue(firstLine, new TypeReference<Map<String, Object>>() {});
-
-            String videoId = (String) result.get("id");
-            String title = (String) result.get("title");
-
-            if (videoId != null && title != null) {
-                return new SearchResult(videoId, title);
-            }
+            return new SearchResult(videoId.trim(), null);
 
         } catch (IOException | InterruptedException e) {
             System.err.println("Exceção ao executar yt-dlp: " + e.getMessage());
