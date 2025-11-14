@@ -1,18 +1,34 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: CI/CD Multi-Ambiente
+
+on:
+  push:
+    branches: [ develop, master ]
+
 jobs:
-  Explore-GitHub-Actions:
+  build:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v5
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Debug Secrets (não imprime o valor, só verifica se existe)
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          echo "PROD hook vazio?  $([[ -z '${{ secrets.RENDER_PROD_DEPLOY_HOOK }}' ]] && echo SIM || echo NÃO)"
+          echo "DEV hook vazio?   $([[ -z '${{ secrets.RENDER_DEV_DEPLOY_HOOK }}' ]] && echo SIM || echo NÃO)"
+
+      - name: Notify Render
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            curl -X POST "${{ secrets.RENDER_PROD_DEPLOY_HOOK }}"
+          else
+            curl -X POST "${{ secrets.RENDER_DEV_DEPLOY_HOOK }}"
+          fi
