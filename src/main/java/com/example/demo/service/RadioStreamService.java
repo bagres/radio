@@ -167,6 +167,26 @@ public class RadioStreamService {
         return "Erro: O serviço de rádio não está ativo.";
     }
 
+    public String resolveQueryToVideoId(String urlOrQuery) {
+        if (urlOrQuery == null || urlOrQuery.trim().isEmpty()) {
+            return null;
+        }
+
+        String trimmed = urlOrQuery.trim();
+
+        String videoId = extractVideoId(trimmed);
+        if (videoId != null && !videoId.isEmpty()) {
+            return videoId;
+        }
+
+        SearchResult result = searchYoutubeVideo(trimmed);
+        if (result != null) {
+            return result.id();
+        }
+
+        return null;
+    }
+
     public void sendInitialSync(SseEmitter emitter) throws IOException {
         String currentVideoId = getCurrentVideoId();
 

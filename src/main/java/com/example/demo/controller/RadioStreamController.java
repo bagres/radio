@@ -29,18 +29,35 @@ public class RadioStreamController {
         return service.addMusicToPlaylist(urlOrVideoId);
     }
 
-    @GetMapping("/radio/search")
-    public ResponseEntity<SearchResult> searchYoutube(@RequestParam("query") String query) {
-        if (query == null || query.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
+    @PostMapping("/radio/add")
+    public ResponseEntity<String> addByUrlOrSearch(@RequestParam("input") String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Input vazio.");
         }
-        SearchResult result = service.searchYoutubeVideo(query);
 
-        if (result != null) {
-            return ResponseEntity.ok(result);
-        } else {
-            return ResponseEntity.notFound().build();
+        String videoId = service.resolveQueryToVideoId(input);
+
+        if (videoId == null) {
+            return ResponseEntity.badRequest().body("Erro: Não foi possível encontrar um vídeo para o input fornecido.");
         }
+
+        return service.addMusicToPlaylist(videoId);
+    }
+
+    @PostMapping("/radio/search-add")
+    public ResponseEntity<String> searchAndAdd(@RequestParam("query") String query) {
+
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Query vazia.");
+        }
+
+        SearchResult video = service.searchYoutubeVideo(query);
+
+        if (video == null) {
+            return ResponseEntity.badRequest().body("Erro: Nenhum vídeo encontrado.");
+        }
+
+        return service.addMusicToPlaylist(video.id());
     }
 
     @GetMapping(value = "/radio/metadata", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
