@@ -5,17 +5,15 @@ import com.example.demo.service.RadioStreamService;
 import com.example.demo.service.RadioStreamService.SearchResult;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.io.IOException;
 import java.util.Queue;
 
-
 @RestController
+@RequestMapping("/radio")
 public class RadioStreamController {
 
     private final RadioStreamService service;
@@ -24,73 +22,69 @@ public class RadioStreamController {
         this.service = service;
     }
 
-    @PostMapping("/radio/add-youtube")
-    public ResponseEntity<String> addYoutubeAudio(@RequestParam("videoId") String urlOrVideoId) {
-        return service.addMusicToPlaylist(urlOrVideoId);
-    }
+    @PostMapping("/add-youtube/{room}")
+    public ResponseEntity<String> addYoutubeAudio(
+            @PathVariable String room,
+            @RequestParam("videoId") String input) {
 
-    @PostMapping("/radio/add")
-    public ResponseEntity<String> addByUrlOrSearch(@RequestParam("input") String input) {
         if (input == null || input.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Erro: Input vazio.");
         }
 
         String videoId = service.resolveQueryToVideoId(input);
 
-        if (videoId == null) {
-            return ResponseEntity.badRequest().body("Erro: Não foi possível encontrar um vídeo para o input fornecido.");
-        }
+        if (videoId == null) return ResponseEntity.badRequest().body("Erro: Não foi possível encontrar um vídeo para o input fornecido.");
 
-        return service.addMusicToPlaylist(videoId);
+
+        service.addMusicToPlaylist(room,videoId);
+        return ResponseEntity.ok().body(videoId);
     }
 
-    @PostMapping("/radio/search-add")
-    public ResponseEntity<String> searchAndAdd(@RequestParam("query") String query) {
+    @GetMapping("/search/{room}")
+    public ResponseEntity<SearchResult> searchYoutube(
+            @PathVariable String room,
+            @RequestParam("query") String query) {
 
         if (query == null || query.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Erro: Query vazia.");
+            return ResponseEntity.badRequest().body(null);
         }
 
-        SearchResult video = service.searchYoutubeVideo(query);
-
-        if (video == null) {
-            return ResponseEntity.badRequest().body("Erro: Nenhum vídeo encontrado.");
-        }
-
-        return service.addMusicToPlaylist(video.id());
+        SearchResult result = service.searchYoutubeVideo(query);
+        return result != null ? ResponseEntity.ok(result)
+                : ResponseEntity.notFound().build();
     }
 
-    @GetMapping(value = "/radio/metadata", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamMetadata() {
-        SseEmitter emitter = service.createSseEmitter();
-
+    @GetMapping(value = "/metadata/{room}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamMetadata(@PathVariable String room) {
+        SseEmitter emitter = service.createSseEmitter(room);
         try {
-            service.sendInitialSync(emitter);
+            service.sendInitialSync(room, emitter);
         } catch (IOException e) {
-            return emitter;
+            // Ignora desconexões
         }
-
         return emitter;
     }
 
-    @PostMapping("/radio/skip")
-    public String skipSong(@RequestParam("videoId") String videoId) {
-        return service.skipCurrentSong(videoId);
+    @PostMapping("/skip/{room}")
+    public String skipSong(@PathVariable String room,
+                           @RequestParam("videoId") String videoId) {
+        return service.skipCurrentSong(room, videoId);
     }
 
-    @GetMapping("/radio/status")
+    //Apagar na proxima versao
+    @GetMapping("/status")
     public String statusCheck() {
         return "OK";
     }
 
-    @GetMapping("/radio-lista")
-    public Queue<VideoInfo> listaMusicas(){
-        return service.getPlaylist();
+    @GetMapping("/playlist/{room}")
+    public Queue<VideoInfo> listaMusicas(@PathVariable String room) {
+        return service.getPlaylist(room);
     }
 
-    @GetMapping("/radio/listeners")
-    public int getListenerCount() {
-        return service.getListenerCount();
+    @GetMapping("/listeners/{room}")
+    public int getListenerCount(@PathVariable String room) {
+        return service.getListenerCount(room);
     }
 
 }
