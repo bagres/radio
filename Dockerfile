@@ -14,5 +14,6 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 
 #Como rodar:
+#Para teste local para poder usar o conteiner python funciona perfeitamente
 #docker build -t radio .
 #docker run -d -p 8080:8080 --name radio radio
