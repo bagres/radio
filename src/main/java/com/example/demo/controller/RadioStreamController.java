@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.info.RadioRoom;
+import com.example.demo.info.RoomInfoDTO;
 import com.example.demo.info.VideoInfo;
 import com.example.demo.service.RadioStreamService;
 import com.example.demo.service.RadioStreamService.SearchResult;
@@ -7,9 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springframework.web.servlet.view.RedirectView;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 @RestController
@@ -21,7 +24,10 @@ public class RadioStreamController {
     public RadioStreamController(RadioStreamService service) {
         this.service = service;
     }
-
+    @GetMapping("/list-rooms")
+    public List<RoomInfoDTO> listRooms(){
+        return service.listRooms();
+    }
     @PostMapping("/add-youtube/{room}")
     public ResponseEntity<String> addYoutubeAudio(
             @PathVariable String room,

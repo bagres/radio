@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.info.RadioRoom;
+import com.example.demo.info.RoomInfoDTO;
 import com.example.demo.info.VideoInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,24 +27,26 @@ import java.util.stream.Collectors;
 @Service
 public class RadioStreamService {
     public record SearchResult(String id, String title) {}
-    // Mapa de salas (por nome, id, etc)
     private final Map<String, RadioRoom> rooms = new ConcurrentHashMap<>();
 
-    // Obtém ou cria uma sala
-    private RadioRoom getRoom(String roomName) {
+    public RadioRoom getRoom(String roomName) {
         return rooms.computeIfAbsent(roomName, k -> new RadioRoom(roomName));
     }
+    public List<RoomInfoDTO> listRooms() {
+        return rooms.values().stream()
+                .map(room -> new RoomInfoDTO(
+                        room.getRoomId(),
+                        room.getMetadataListeners().size(),
+                        room.getYoutubePlaylist().size(),
+                        room.getCurrentVideoId()
+                ))
+                .toList();
+    }
 
-    // Métodos delegando para a sala específica
     public void addMusicToPlaylist(String room, String videoId) {
-
         getRoom(room).addMusic(videoId);
     }
     public String resolveQueryToVideoId(String urlOrQuery) {
-        if (urlOrQuery == null || urlOrQuery.trim().isEmpty()) {
-            return null;
-        }
-
         String trimmed = urlOrQuery.trim();
 
         String videoId = extractVideoId(trimmed);
@@ -77,6 +81,10 @@ public class RadioStreamService {
     public int getListenerCount(String room) {
         return getRoom(room).getListenerCount();
     }
+    public void closeRoom(String roomName) {
+        RadioRoom room = rooms.remove(roomName);
+        room.shutdown();
+        }
 
 
     public SearchResult searchYoutubeVideo(String query) {

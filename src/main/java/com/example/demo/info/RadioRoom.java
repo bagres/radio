@@ -1,7 +1,10 @@
 package com.example.demo.info;
 
 import com.example.demo.info.VideoInfo;
+import com.example.demo.service.RadioStreamService;
+import com.example.demo.service.RadioStreamServiceHolder;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.client.RestTemplate;
@@ -18,6 +21,12 @@ import java.util.stream.Collectors;
 
 @Data
 public class RadioRoom {
+    public RadioRoom( String roomId) {
+        this.roomId = roomId;
+        startKeepAliveLoop();
+    }
+
+
 
     public record VideoDetails(String title, String authorName, String statusMessage) {}
 
@@ -39,6 +48,8 @@ public class RadioRoom {
                     .map(RadioRoom::normalizeString)
                     .collect(Collectors.toSet());
 
+    private static final long ROOM_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+    private long noActivitySince = System.currentTimeMillis();
     private String roomId;
     private volatile String currentVideoId = null;
     private volatile long currentVideoStartTimeMs = 0;
@@ -49,10 +60,7 @@ public class RadioRoom {
     private final Set<String> musicasPresentes = ConcurrentHashMap.newKeySet();
 
     private final RestTemplate restTemplate = new RestTemplate();
-    public RadioRoom(String roomId) {
-        this.roomId = roomId;
-        startKeepAliveLoop();
-    }
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r);
         t.setName("radio-room-" + roomId + "-thread");
@@ -206,10 +214,10 @@ public class RadioRoom {
         }
     }
 
+
     private void startKeepAliveLoop() {
-        // envia keepalive a cada 3s e envia contagem de listeners
         keepAliveScheduler.scheduleAtFixedRate(() -> {
-            // keepalive comment
+
             metadataListeners.removeIf(emitter -> {
                 try {
                     emitter.send(SseEmitter.event().comment("keep-alive"));
@@ -221,7 +229,6 @@ public class RadioRoom {
             });
 
             String countPayload = String.valueOf(metadataListeners.size());
-
             metadataListeners.removeIf(emitter -> {
                 try {
                     emitter.send(SseEmitter.event().name("listener_count").data(countPayload));
@@ -231,8 +238,26 @@ public class RadioRoom {
                     return true;
                 }
             });
+
+            boolean noListeners   = metadataListeners.isEmpty();
+            boolean playlistVazia = youtubePlaylist.isEmpty();
+
+            if (noListeners && playlistVazia) {
+
+                long agora = System.currentTimeMillis();
+
+                if (agora - noActivitySince >= ROOM_IDLE_TIMEOUT_MS) {
+                    RadioStreamServiceHolder.closeRoomExternally(roomId);
+                }
+
+            } else {
+                noActivitySince = System.currentTimeMillis();
+            }
+
         }, 3, 3, TimeUnit.SECONDS);
     }
+
+
 
     private void notifyMetadataUpdate(String videoId, String title, String status, long startTimeMs) {
         String finalTitle;
