@@ -30,8 +30,9 @@ public class RadioStreamService {
     private final Map<String, RadioRoom> rooms = new ConcurrentHashMap<>();
 
     public RadioRoom getRoom(String roomName) {
-        return rooms.computeIfAbsent(roomName, k -> new RadioRoom(roomName));
+        return rooms.computeIfAbsent(roomName, k -> new RadioRoom(this, roomName));
     }
+
     public List<RoomInfoDTO> listRooms() {
         return rooms.values().stream()
                 .map(room -> new RoomInfoDTO(
@@ -81,10 +82,19 @@ public class RadioStreamService {
     public int getListenerCount(String room) {
         return getRoom(room).getListenerCount();
     }
-    public void closeRoom(String roomName) {
+    public boolean closeRoom(String roomName) {
         RadioRoom room = rooms.remove(roomName);
-        room.shutdown();
+
+        if (room == null) {
+            return false;
         }
+
+        room.shutdown();
+        rooms.put(roomName, null);
+
+        return true;
+    }
+
 
 
     public SearchResult searchYoutubeVideo(String query) {

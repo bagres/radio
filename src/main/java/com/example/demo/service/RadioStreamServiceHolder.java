@@ -1,17 +1,22 @@
 package com.example.demo.service;
 
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
 public class RadioStreamServiceHolder {
 
-    private static RadioStreamService service;
+    private RadioStreamService service;
 
-    public static void registerService(RadioStreamService srv) {
-        service = srv;
+    @Autowired
+    public RadioStreamServiceHolder(RadioStreamService service) {
+        this.service = service;
     }
 
-    public static void closeRoomExternally(String roomId) {
-            service.closeRoom(roomId);
-
+    public void closeRoomExternally(String roomId) {
+        service.closeRoom(roomId);
     }
 }
+
 

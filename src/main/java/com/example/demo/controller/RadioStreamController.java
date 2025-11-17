@@ -66,7 +66,6 @@ public class RadioStreamController {
         try {
             service.sendInitialSync(room, emitter);
         } catch (IOException e) {
-            // Ignora desconexões
         }
         return emitter;
     }

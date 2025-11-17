@@ -1,34 +1,32 @@
 package com.example.demo.info;
 
-import com.example.demo.info.VideoInfo;
 import com.example.demo.service.RadioStreamService;
 import com.example.demo.service.RadioStreamServiceHolder;
 import lombok.Data;
+import lombok.extern.java.Log;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Data
+@Log
 public class RadioRoom {
-    public RadioRoom( String roomId) {
+    public RadioRoom(RadioStreamService radioService, String roomId) {
+        this.radioService = radioService;
         this.roomId = roomId;
         startKeepAliveLoop();
     }
 
 
 
-    public record VideoDetails(String title, String authorName, String statusMessage) {}
 
     private static final String[] RAW_ALLOWED_AUTHORS = {
             "Ícaro e Gilmar",
@@ -47,8 +45,9 @@ public class RadioRoom {
             Arrays.stream(RAW_ALLOWED_AUTHORS)
                     .map(RadioRoom::normalizeString)
                     .collect(Collectors.toSet());
+    private final RadioStreamService radioService; // nova dependência
 
-    private static final long ROOM_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+    private static final long ROOM_IDLE_TIMEOUT_MS = 1 * 60 * 1000;
     private long noActivitySince = System.currentTimeMillis();
     private String roomId;
     private volatile String currentVideoId = null;
@@ -56,7 +55,7 @@ public class RadioRoom {
     private Future<?> playlistFuture;
     private final Queue<VideoInfo> youtubePlaylist = new ArrayBlockingQueue<>(200);
     private final CopyOnWriteArrayList<SseEmitter> metadataListeners = new CopyOnWriteArrayList<>();
-    // Set concorrente para checagem rápida de duplicados
+    //o set foi adicionado a fim de verificar mais rapidamente se a música à ser inserida já está presente
     private final Set<String> musicasPresentes = ConcurrentHashMap.newKeySet();
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -79,17 +78,11 @@ public class RadioRoom {
     public synchronized String addMusic(String videoId) {
         if (videoId.trim().isEmpty()) return "Erro: ID/URL inválido.";
 
-
-//        String videoId = extractVideoId(urlOrVideoId);
-//        if (videoId.trim().length() != 11) {
-//            return "Erro: Não foi possível extrair ID do vídeo.";
-//        }
-
         if (!musicasPresentes.add(videoId)) return "Erro: Esta música já está na fila.";
 
 
         VideoDetails details = getDetailsFromYoutube(videoId);
-        VideoInfo newVideo = new VideoInfo(videoId, details.title, details.statusMessage);
+        VideoInfo newVideo = new VideoInfo(videoId, details.title(), details.statusMessage());
 
         boolean offered = youtubePlaylist.offer(newVideo);
         if (!offered) {
@@ -111,7 +104,7 @@ public class RadioRoom {
             }
         });
 
-        return "Música adicionada (" + details.statusMessage + "): " + details.title;
+        return "Música adicionada (" + details.statusMessage() + "): " + details.title();
     }
 
     public SseEmitter createSseEmitter() {
@@ -147,7 +140,7 @@ public class RadioRoom {
         if (current != null) {
             long start = currentVideoStartTimeMs;
             VideoDetails details = getDetailsFromYoutube(current);
-            notifySingleEmitter(emitter, current, details.title, details.statusMessage, start);
+            notifySingleEmitter(emitter, current, details.title(), details.statusMessage(), start);
         } else {
             notifySingleEmitter(emitter, "RADIO_STOPPED_ID", "Rádio pausada. Fila vazia.", "Aguardando músicas.", currentVideoStartTimeMs);
         }
@@ -169,50 +162,43 @@ public class RadioRoom {
     private void playlistManagerLoop() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
+
                 VideoInfo next = youtubePlaylist.poll();
                 String currentTitle = null;
                 String currentStatus = null;
 
                 if (next == null) {
-                    // fila vazia: notifica e espera
                     notifyMetadataUpdate("RADIO_STOPPED_ID", null, null, 0);
                     Thread.sleep(5000);
                     continue;
                 } else {
-                    setCurrentVideoId(next.getVideoId());
-                    currentTitle = next.getTitle();
-                    currentStatus = next.getStatus();
+                    setCurrentVideoId(next.videoId());
+                    currentTitle = next.title();
+                    currentStatus = next.status();
                     currentVideoStartTimeMs = System.currentTimeMillis();
-                    // Remover do set de presentes pois agora está sendo reproduzida (ou já está)
-                    musicasPresentes.remove(next.getVideoId());
+                    musicasPresentes.remove(next.videoId()); // remove ao iniciar
                 }
 
                 notifyMetadataUpdate(getCurrentVideoId(), currentTitle, currentStatus, currentVideoStartTimeMs);
 
                 try {
-                    // aguarda tempo máximo (20 minutos) simulando reprodução
-                    long maxWaitTime = 20L * 60L * 1000L;
-                    long interval = 500L;
-                    long waited = 0L;
-                    while (waited < maxWaitTime) {
-                        Thread.sleep(interval);
-                        waited += interval;
+
+                    while (!Thread.currentThread().isInterrupted()) {
+                        Thread.sleep(500);
                     }
-                    // quando sair do while, pode ir para próxima
+
                 } catch (InterruptedException e) {
-                    // skip foi acionado: interrompe e segue para a próxima iteração
                     Thread.currentThread().interrupt();
-                    // continuar para próxima música (o loop externo tratará)
                     break;
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            // finaliza estado da playlsitFuture para permitir re-submissão futura
             playlistFuture = null;
         }
     }
+
 
 
     private void startKeepAliveLoop() {
@@ -247,7 +233,8 @@ public class RadioRoom {
                 long agora = System.currentTimeMillis();
 
                 if (agora - noActivitySince >= ROOM_IDLE_TIMEOUT_MS) {
-                    RadioStreamServiceHolder.closeRoomExternally(roomId);
+                    log.info("fechando sala "+roomId);
+                    radioService.closeRoom(roomId);
                 }
 
             } else {
@@ -304,13 +291,10 @@ public class RadioRoom {
         try {
             emitter.send(SseEmitter.event().name("sync").data(payload, MediaType.APPLICATION_JSON));
         } catch (IOException e) {
-            // se falhar, remover emitter (ou apenas ignorar)
             metadataListeners.remove(emitter);
             emitter.completeWithError(e);
         }
     }
-
-    // ---------- utilitários (extraídos do seu código original) ----------
 
     private static String normalizeString(String input) {
         if (input == null) return "";
@@ -371,40 +355,56 @@ public class RadioRoom {
         return new VideoDetails(title, authorName, statusMessage);
     }
 
-    private String extractVideoId(String urlOrVideoId) {
-        if (urlOrVideoId == null) return null;
-        String candidate = urlOrVideoId.trim();
-        if (candidate.length() == 11 && !candidate.contains("/")) {
-            return candidate;
-        }
-        // regex para capturar ID em urls youtube/shorts/embed etc
-        String regexShort = "(?:youtu\\.be\\/|\\/embed\\/|\\/v\\/|watch\\?v=|v%3D|v\\=|youtu\\.be\\/)([^#\\&\\?]{11})";
-        Pattern pattern = Pattern.compile(regexShort, Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(candidate);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        try {
-            URL url = new URL(candidate);
-            String query = url.getQuery();
-            if (query != null) {
-                for (String param : query.split("&")) {
-                    if (param.startsWith("v=")) {
-                        return param.substring(2);
-                    }
-                }
-            }
-        } catch (MalformedURLException ignored) {}
-        return null;
-    }
-
     public void shutdown() {
         try {
-            if (playlistFuture != null) playlistFuture.cancel(true);
-        } catch (Exception ignored) {}
-        executor.shutdownNow();
-        keepAliveScheduler.shutdownNow();
-        metadataListeners.forEach(SseEmitter::complete);
-        metadataListeners.clear();
+            try {
+                if (playlistFuture != null) {
+                    playlistFuture.cancel(true);
+                }
+            } catch (Exception ignored) {}
+
+            playlistFuture = null;
+
+            try {
+                if (executor != null && !executor.isShutdown()) {
+                    executor.shutdownNow();
+                    executor.awaitTermination(500, TimeUnit.MILLISECONDS);
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            } catch (Exception ignored) {}
+
+            try {
+                if (keepAliveScheduler != null && !keepAliveScheduler.isShutdown()) {
+                    keepAliveScheduler.shutdownNow();
+                    keepAliveScheduler.awaitTermination(500, TimeUnit.MILLISECONDS);
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            } catch (Exception ignored) {}
+
+            try {
+                for (SseEmitter e : metadataListeners) {
+                    try { e.complete(); } catch (Exception ex) {  }
+                }
+            } catch (Exception ignored) {}
+            metadataListeners.clear();
+
+            try {
+                youtubePlaylist.clear();
+                musicasPresentes.clear();
+            } catch (Exception ignored) {}
+
+            currentVideoId = null;
+            currentVideoStartTimeMs = 0L;
+            noActivitySince = 0L;
+
+
+
+
+        } catch (Throwable t) {
+            log.severe("Erro no shutdown da room " + roomId + ": " + t.getMessage());
+        }
     }
+
 }

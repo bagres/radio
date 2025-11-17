@@ -52,7 +52,6 @@
           to { opacity: 1; }
         }
 
-        /* ======== PLAYER INVISÍVEL ======== */
         #player {
           width: 1px;
           height: 1px;
@@ -71,27 +70,19 @@
           color: #f0f0f0;
         }
 
-        /* Aplica o gradiente APENAS ao texto principal */
         #radio-title-main .title-text-gradient {
           background: linear-gradient(90deg, #3498db, #9b59b6);
-          /* Propriedades que tornam o texto transparente e mostram o gradiente */
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          color: transparent; /* Fallback para navegadores sem -webkit- */
+          color: transparent;
           display: inline;
         }
 
-        /* * CORREÇÃO PARA O EMOJI:
-         * Remove as propriedades de texto transparente e garante que a cor seja herdada
-         * ou definida para aparecer corretamente.
-         */
         #radio-title-main .emoji-icon {
-          /* Remove a transparência forçada que esconde o emoji */
           -webkit-text-fill-color: initial;
           color: inherit;
 
-          /* Remove o clip de background que o emoji pode herdar */
           -webkit-background-clip: initial;
           background-clip: initial;
         }
@@ -105,7 +96,6 @@
             max-width: 900px;
         }
 
-        /* ======== CARD PRINCIPAL ======== */
         .radio-container {
           background: rgba(0, 0, 0, 0.5);
           backdrop-filter: blur(10px);
@@ -124,7 +114,6 @@
           transform: scale(1.02);
         }
 
-        /* ======== INFO ======== */
         #current-info {
           margin-top: 15px;
           font-size: 1.1em;
@@ -133,22 +122,20 @@
           word-break: break-word;
         }
 
-        /* ======== ESTILO CONTADOR DE OUVINTES ======== */
         .listener-info-container {
             margin-top: 20px;
             font-size: 1.1em;
             font-weight: 500;
-            color: #3498db; /* Cor azul de destaque */
+            color: #3498db;
             text-align: center;
         }
 
         #listener-count {
-            font-weight: 700; /* Deixa o número em negrito */
-            color: #2ecc71; /* Cor verde para destaque */
+            font-weight: 700;
+            color: #2ecc71;
             margin-left: 5px;
         }
 
-        /* ======== BOTÕES ======== */
         .controls {
           display: flex;
           justify-content: center;
@@ -187,7 +174,6 @@
           transform: scale(1.05);
         }
 
-        /* ======== FORM DE ADIÇÃO ======== */
         form {
           margin-top: 30px;
           display: flex;
@@ -226,7 +212,6 @@
           background: #219150;
         }
 
-        /* ======== FUNDO ANIMADO ======== */
         .background-anim {
           position: fixed;
           width: 200%;
@@ -243,7 +228,6 @@
           to { transform: rotate(360deg); }
         }
 
-        /* ======== RESPONSIVIDADE ======== */
         @media (max-width: 600px) {
           h2 {
             font-size: 1.6em;
@@ -303,7 +287,6 @@
                 width: 420px;
             }
 
-            /* Título maior */
             h2 {
                 font-size: 2.4em;
             }
@@ -337,11 +320,11 @@
             }
 
             h2 {
-              font-size: 1.6em; /* Vindo da regra antiga de 600px */
+              font-size: 1.6em;
             }
 
             #current-info {
-              font-size: 1em; /* Vindo da regra antiga de 600px */
+              font-size: 1em;
             }
 
             input[type="text"] {
@@ -350,9 +333,9 @@
             }
 
             #chat-form {
-                display: flex; /* Adicionado display: flex, se não estiver no CSS base */
+                display: flex;
                 flex-direction: column;
-                gap: 10px; /* Adiciona espaçamento entre o bloco de inputs e o botão */
+                gap: 10px;
                 align-items: stretch;
             }
             #chat-inputs-wrapper {
@@ -623,7 +606,7 @@
     var player;
     var currentVideoId = '';
     var isMuted = true;
-    const room = window.location.pathname.split("/radio/")[2];
+    const room = window.location.pathname.split("/radio/")[1];
     // Carrega a API do YouTube
     var tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
@@ -964,7 +947,6 @@
     }
 
     function syncChatHeight() {
-            // 🛑 Referência: Apenas o Card da Rádio (.radio-container) 🛑
         const radioCard = document.querySelector('.radio-container');
         const chatCard = document.querySelector('.chat-container');
 
