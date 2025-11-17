@@ -149,6 +149,7 @@ public class RadioRoom {
         if (playlistFuture != null && currentVideoId != null && currentVideoId.equals(videoId)) {
             boolean cancelled = playlistFuture.cancel(true);
             if (cancelled) {
+                currentVideoStartTimeMs = 0;
                 playlistFuture = executor.submit(this::playlistManagerLoop);
                 return "Música pulada. Próxima será carregada.";
             } else {
