@@ -149,7 +149,11 @@ public class RadioRoom {
         if (playlistFuture != null && currentVideoId != null && currentVideoId.equals(videoId)) {
             boolean cancelled = playlistFuture.cancel(true);
             if (cancelled) {
-                currentVideoStartTimeMs = 0;
+
+                // FORÇA reset imediato
+                currentVideoStartTimeMs = System.currentTimeMillis();
+                notifyMetadataUpdate(currentVideoId, null, null, currentVideoStartTimeMs);
+
                 playlistFuture = executor.submit(this::playlistManagerLoop);
                 return "Música pulada. Próxima será carregada.";
             } else {
@@ -158,6 +162,7 @@ public class RadioRoom {
         }
         return "Erro: música informada não é a atual ou rádio não está executando.";
     }
+
 
     private void playlistManagerLoop() {
         try {
