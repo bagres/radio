@@ -45,19 +45,18 @@ public class RadioStreamController {
         service.addMusicToPlaylist(room,videoId);
         return ResponseEntity.ok().body(videoId);
     }
-
-    @GetMapping("/search/{room}")
-    public ResponseEntity<SearchResult> searchYoutube(
-            @PathVariable String room,
-            @RequestParam("query") String query) {
-
-        if (query == null || query.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
+    @PostMapping("/add/{room}")
+    public ResponseEntity<String> addByUrlOrSearch(@PathVariable("room") String room,@RequestParam("input") String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Erro: Input vazio.");
         }
 
-        SearchResult result = service.searchYoutubeVideo(query);
-        return result != null ? ResponseEntity.ok(result)
-                : ResponseEntity.notFound().build();
+        String videoId = service.resolveQueryToVideoId(input);
+
+        if (videoId == null) {
+            return ResponseEntity.badRequest().body("Erro: Não foi possível encontrar um vídeo para o input fornecido.");
+        }
+        return ResponseEntity.ok(service.addMusicToPlaylist(room,videoId));
     }
 
     @GetMapping(value = "/metadata/{room}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

@@ -44,8 +44,8 @@ public class RadioStreamService {
                 .toList();
     }
 
-    public void addMusicToPlaylist(String room, String videoId) {
-        getRoom(room).addMusic(videoId);
+    public String addMusicToPlaylist(String room, String videoId) {
+       return getRoom(room).addMusic(videoId);
     }
     public String resolveQueryToVideoId(String urlOrQuery) {
         String trimmed = urlOrQuery.trim();
@@ -131,8 +131,9 @@ public class RadioStreamService {
                 return null;
             }
 
-            if (jsonOutput.trim().isEmpty()) return null;
-
+            if (jsonOutput.trim().isEmpty()) {
+                return null;
+            }
 
             String firstLine = jsonOutput.split("\n")[0];
 
