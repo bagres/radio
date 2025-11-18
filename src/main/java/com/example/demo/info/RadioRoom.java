@@ -46,7 +46,7 @@ public class RadioRoom {
                     .collect(Collectors.toSet());
     private final RadioStreamService radioService; // nova dependência
 
-    private static final long ROOM_IDLE_TIMEOUT_MS = 1 * 60 * 1000;
+    private static final long ROOM_IDLE_TIMEOUT_MS = 1 * 60 * 5000;
     private long noActivitySince = System.currentTimeMillis();
     private String roomId;
     private volatile String currentVideoId = null;
@@ -149,11 +149,6 @@ public class RadioRoom {
         if (playlistFuture != null && currentVideoId != null && currentVideoId.equals(videoId)) {
             boolean cancelled = playlistFuture.cancel(true);
             if (cancelled) {
-
-                // FORÇA reset imediato
-                currentVideoStartTimeMs = System.currentTimeMillis();
-                notifyMetadataUpdate(currentVideoId, null, null, currentVideoStartTimeMs);
-
                 playlistFuture = executor.submit(this::playlistManagerLoop);
                 return "Música pulada. Próxima será carregada.";
             } else {
